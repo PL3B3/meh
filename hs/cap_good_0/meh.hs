@@ -1,0 +1,4 @@
+--Q!, 10-5-17
+--We desire insight on desire.
+--End goal is to formulate a map of what people want. Very difficult.
+--What people want is manifested in 

@@ -77,3 +77,12 @@ deriv :: (Fractional a, Num a, RealFrac a, Read a) => String -> a -> String -> a
 --deriv p n xpr = [((rpn p (n + 0.0000000000001) xpr - rpn p n xpr) / 0.0000000000001), ((rpn p n xpr - rpn p (n - 0.0000000000001) xpr) / 0.0000000000001)] 
 
 deriv p n xpr = (rpn p (n + 0.000000001) xpr - rpn p (n - 0.000000001) xpr) / 0.000000002 
+
+composer :: [Char] -> [Char] -> String -> String
+composer x char y = repl x char (words y)
+
+repl :: [Char] -> [Char] -> [String] -> String
+repl a b (c:cs)
+  | cs == [] = c
+  | b == c = a ++ " " ++ repl a b cs
+  | otherwise = c ++ " " ++ repl a b cs

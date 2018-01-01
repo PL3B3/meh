@@ -50,12 +50,14 @@ evalToBool frame func
 snapToBool :: (Show a, Read a) => Snap -> String -> (a -> Bool) -> Maybe Bool
 snapToBool snap str func = evalToBool (findFrame snap str) func
 
---needs to handle cases where snapToBool yields Nothing
---change to satisfactory / number of snaps containing the frame
 portionTrue :: (Show a, Read a) => [Snap] -> String -> (a -> Bool) -> Float
-portionTrue snapList str func = L.genericLength satisfecho / L.genericLength snapList
-  where satisfecho = filter (\x -> maybeToReal $ snapToBool x str func) snapList
-          | 
-{-
+portionTrue snapList str func = (sum $ map tru snapList) / (sum $ map has snapList)
+  where tru snap | snapToBool snap str func == Just True = 1.0 | otherwise = 0.0
+        has snap | findFrame snap str == Nothing = 0.0 | otherwise = 1.0
 
+
+{-
+satisfecho = filter (\x -> maybeToReal $ snapToBool x str func) snapList
+          | findFrame (head snapList) str == Nothing = 
+          |
 -}

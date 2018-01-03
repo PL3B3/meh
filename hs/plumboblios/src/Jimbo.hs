@@ -34,7 +34,7 @@ var is the var we're examining: Coin for coin flip. Temperature for whatev probl
 wld is the current state of the boi
 -}
 data Probability a = Probability {
-  val :: Double deriving Ord,
+  val :: Double,
   var :: Variable a,
   evt :: a,
   wld :: Environment

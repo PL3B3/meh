@@ -167,6 +167,15 @@ satisfecho = filter (\x -> maybeToReal $ snapToBool x str func) snapList
           | findFrame (head snapList) str == Nothing = 
           |
 -}
+<<<<<<< HEAD
+data Probability a = Probability {
+  val :: Double,
+  var :: Variable a,
+  evt :: a,
+  wld :: Environment
+                  } deriving (Show, Eq, Read)
+=======
+>>>>>>> 401b9592c562cf274b500a30e6fa186c9bc0f299
 
 {-
 old non-string functions

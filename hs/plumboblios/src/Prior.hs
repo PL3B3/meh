@@ -175,43 +175,8 @@ unionProb sL evt cnd = (sum $ map (portionTrueMulti sL) [evt, cnd]) - (intscProb
 complement :: Double -> Double
 complement = negate . subtract 1.0
 
+palindrome :: (Eq a) => [a] -> Bool
+palindrome x = x == reverse x
 
-
-{-
-satisfecho = filter (\x -> maybeToReal $ snapToBool x str func) snapList
-          | findFrame (head snapList) str == Nothing = 
-          |
--}
-
-{-
-old non-string functions
-
-bCondProb :: (Show a, Read a, Num b, Fractional b) => [Snap] -> [(String, (a -> Bool))] -> [(String, (a -> Bool))] -> b
-bCondProb sL evt cnd = (condProb sL cnd evt) * (portionTrueMulti sL evt) / (portionTrueMulti sL cnd)
-
-condProb :: (Show a, Read a, Num b, Fractional b) => [Snap] -> [(String, (a -> Bool))] -> [(String, (a -> Bool))] -> b
-condProb snapList evnt cond = (portionTrueMulti snapList (evnt ++ cond)) / (portionTrueMulti snapList cond)
-
-portionTrueMulti :: (Show a, Read a, Num b, Fractional b) => [Snap] -> [(String, (a -> Bool))] -> b
-portionTrueMulti snapList checkNet = (sum $ map tru snapList) / (sum $ map has snapList)
-  where tru snap | all (== Just True) [snapToBool snap (fst a) (snd a) | a <- checkNet] = 1.0 | otherwise = 0.0
-        has snap | elem Nothing [findFrame snap (fst a) | a <- checkNet] = 0.0 | otherwise = 1.0
-
-portionTrueSingle :: (Show a, Read a, Num b, Fractional b) => [Snap] -> String -> (a -> Bool) -> b
-portionTrueSingle snapList str func = (sum $ map tru snapList) / (sum $ map has snapList)
-  where tru snap | snapToBool snap str func == Just True = 1.0 | otherwise = 0.0
-        has snap | findFrame snap str == Nothing = 0.0 | otherwise = 1.0
-
-trueSnaps :: (Show a, Read a) => [Snap] -> [(String, (a -> Bool))] -> [Snap]
-trueSnaps snapList checkNet = filter (\x -> all (== Just True) [snapToBool x (fst a) (snd a) | a <- checkNet]) snapList
-
-snapToBool :: (Show a, Read a) => Snap -> String -> (a -> Bool) -> Maybe Bool
-snapToBool snap str func = evalToBool (findFrame snap str) func
-
-evalToBool :: (Show a, Read a) => Maybe (String, String) -> (a -> Bool) -> Maybe Bool
-evalToBool frame func 
-  | frame == Nothing = Nothing
-  | otherwise = Just (func (read $ snd $ maybeToReal frame))
-
--}
+jek = putStrLn "hi"
 

@@ -2,37 +2,30 @@ module Lib
     ( someFunc
     ) where
 
+import Data.Char  
+
 someFunc :: IO ()
-someFunc = putStrLn "someFunc"
+someFunc = do 
+  putStrLn "IT'S TIME TO DO A GAME. GIVE ME A NUMBER"
+  num <- getLine 
+  putStrLn ("HAHA I FOOLED YOU, THE NUMBER " ++ num ++ " IS MEANINGLESS")
 
+main = do   
+    line <- getLine  
+    if null line  
+        then return ()  
+        else do  
+            putStrLn $ spongeBobify $ flippo line
+            main  
 
-{-
-data Elist = Elist [Environment] deriving (Show, Eq, Read)
+flippo :: String -> String
+flippo = unwords . reverse . words
 
-data Environment = Environment [Variable Int] [Variable Bool] [Variable Float] deriving (Show, Eq, Read)
+reverseWords :: String -> String  
+reverseWords = unwords . map reverse . words  
 
-data Variable a = Variable {
-  nam :: String,
-  val :: a
-                  } deriving (Show, Eq, Read)
-
-testList = Elist [Environment [Variable {nam = n, val = v}] [Variable {nam = m, val = b}] [] | n <- ["jebVotes"], v <- [400], m <- ["jebWon"], b <- [True]]
-
-numGood :: (Num a, Fractional a) => Elist -> (Environment -> Bool) -> (Environment -> Bool) -> (a, a, a)
-numGood (Elist g) f c = (good, total, good / total)
-  where good = fromIntegral (length $ filter (\x -> (f x) && (c x)) g)
-        total = fromIntegral (length $ filter c g)
-
-pDouble :: (Num a, Fractional a) => Elist -> (Environment -> Bool) -> a
-pDouble (Elist a) f = numGood (Elist a) f / (fromIntegral (length a))
-
-complement :: Probability -> Probability
-complement (Probability v e c) = Probability (1.0 - v) switch_e c
-  where switch_e
-          | Chr.isLower e = Chr.toUpper e
-          | otherwise = Chr.toLower e
-
-intersect :: Probability -> Probability -> Probability
-intersect (Probability baseValue baseEvent baseCond) (Probability newValue newEvent newCond) = Probability (baseValue * newValue) ([baseEvent] ++ " && " ++ [newEvent]) (baseCond ++ newCond)
-
--}
+spongeBobify :: String -> String
+spongeBobify str = map spongu (map toLower str)
+  where spongu x
+          | elem x ['a','e','i','o','u','n','y','r','g','b'] = toUpper x
+          | otherwise = x 

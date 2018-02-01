@@ -29,3 +29,4 @@ spongeBobify str = map spongu (map toLower str)
   where spongu x
           | elem x ['a','e','i','o','u','n','y','r','g','b'] = toUpper x
           | otherwise = x 
+

@@ -79,37 +79,11 @@ linreg1var ptls = (\i -> (yxpec - ) + (((sum $ map (\x y -> (x - xxpec) * (y - y
           xls = map fst ptls
           yls = map snd ptls
 
-{-
-takelowest int (x:xs) = takelowest' int [] (x:xs)
-    where   takelowest' int non (a:as)
-                | int == 0 = []
-                | as == [] = [a]
-                | (fst x) > (fst (fst xs)) = takelowest' int (non ++ [fst xs]) (x:(tail xs))
-                | 
-
-flexibilities :: [Float]
-    denote the flexibility of the model, within a certain range
-data :: Hypercube
--}
---minmse :: [Float] -> 
---minmse  
-{-
-splittopairs (x:xs)
-            | tail xs == [] = (x, (head xs))
-            | otherwise = [(x, (head xs))] ++ splittopairs xs 
-
-processCube :: Hypercube -> String
-processCube (Hypercube lsint lsflt) = show matrixed
-    where matrixed = foldl (\l f -> f l) lsflt (map (\n -> split n) lsint)
-            where split n l 
-                    | length l <= (fromIntegral n) = [(take n l)]
-                    | otherwise = [(take n l)] ++ (split (n) (drop n l)) 
-
-
-
-
-
--}
+logreg :: Float -> Float -> Float -> Float
+logreg int slp x = logterm / (logterm + 1.0)
+    where logterm = (e ^ (int + (slp * x)))
+          e = (1 + (1 / n)) ^ n
+          n = 100
 
 
  

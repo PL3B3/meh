@@ -85,5 +85,12 @@ logreg int slp x = logterm / (logterm + 1.0)
           e = (1 + (1 / n)) ^ n
           n = 100
 
+lindisc :: [([Float], Int)] -> Float -> Int -> Float
+lindisc pool x y = prior * xcondy / probx 
+    where ylst = filter (\x@(ls, rslt) -> rslt == y) pool
+          floatlen = fromIntegral $ length
+          prior = (floatlen ylst) / (floatlen pool)
+          gotx = filter (\x@(ls, rslt) -> elem x ls)
+          probx = (floatlen gotx pool) / (floatlen pool)
 
  

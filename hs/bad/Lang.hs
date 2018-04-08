@@ -1,6 +1,7 @@
-module Bfuck (BFCommand, BFSource, BFSequence, parseBF, checkBF, checkBF', checkBF'') where
+module Lang (BFCommand, BFSource, BFSequence, Tape, parseBF, checkBF, checkBF', checkBF'') where
     
 import Data.Maybe
+import Data.Char
 
 data BFCommand = GoRight -- >
     | GoLeft -- <
@@ -93,3 +94,29 @@ makeLegit code
     | bias < 0 = removeNum code '[' (-(bias))
     | otherwise = reverse (removeNum (reverse code) ']' bias)
         where bias = checkBF'' (BFSequence $ parseBF code)
+
+runBF :: BFSource -> IO ()
+runBF = run emptytape . bfSourceToTape
+  where bfSourceToTape (b:bs) = Tape [] b bs
+
+run :: Tape Int -> Tape BFCommand -> IO ()
+run dataTape source@(Tape _ GoRight _) = advance (moveRight dataTape) source
+run dataTape source@(Tape _ GoLeft _) = advance (moveLeft dataTape) source
+run (Tape l p r) source@(Tape _ Increment _) = advance (Tape l (p+1) r) source
+run (Tape l p r) source@(Tape _ Decrement _) = advance (Tape l (p-1) r) source
+run dataTape@(Tape _ p _) source@(Tape _ Print _) = do
+  putChar (chr p)
+  hFlush stdout
+  advance dataTape source
+run dataTape@(Tape _ p _) source@(Tape _ Print _) = do
+  p <- getChar
+  advance (Tape l (ord p ) r) source
+run dataTape@(Tape _ p _) source@(Tape _ LoopL _)
+  | p == 0 = seekLoopR 0 dataTape source
+  | otherwise = advance dataTape source
+run dataTape@(Tape _ p _) source@(Tape _ LoopR _)
+  | p /= 0 
+
+advance :: Tape Int -> Tape BFCommand -> IO ()
+advance dataTape (Tape _ _ []) = return ()
+advance dataTape source = run dataTape (moveRight source)

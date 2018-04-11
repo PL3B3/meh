@@ -97,7 +97,8 @@ makeLegit code
 
 runBF :: BFSource -> IO ()
 runBF = run emptytape . bfSourceToTape
-  where bfSourceToTape (b:bs) = Tape [] b bs
+  where bfSourceToTape [] = Tape [] Comment []
+        bfSourceToTape (b:bs) = Tape [] b bs
 
 run :: Tape Int -> Tape BFCommand -> IO ()
 run dataTape source@(Tape _ GoRight _) = advance (moveRight dataTape) source
@@ -115,7 +116,22 @@ run dataTape@(Tape _ p _) source@(Tape _ LoopL _)
   | p == 0 = seekLoopR 0 dataTape source
   | otherwise = advance dataTape source
 run dataTape@(Tape _ p _) source@(Tape _ LoopR _)
-  | p /= 0 
+  | p /= 0 = seekLoopL 0 dataTape source
+  | otherwise = advance dataTape source
+
+seekLoopR :: Int -> Tape Int -> Tape BFCommand -> IO ()
+seekLoopR 1 dataTape source@(Tape _ LoopR _) = advance dataTape source
+seekLoopR b dataTape source@(Tape _ LoopR _) = seekLoopR (b-1) dataTape (moveRight source)
+seekLoopR b dataTape source@(Tape _ LoopL _) = seekLoopR (b+1) dataTape (moveRight source)
+seekLoopR b dataTape source = seekLoopR b dataTape (moveRight source)
+
+seekLoopL :: Int -> Tape Int -> Tape BFCommand -> IO ()
+seekLoopL 1 dataTape source@(Tape _ LoopL _) = advance dataTape source
+seekLoopL b dataTape source@(Tape _ LoopL _) = seekLoopL (b-1) dataTape (moveLeft source)
+seekLoopL b dataTape source@(Tape _ LoopR _) = seekLoopL (b+1) dataTape (moveLeft source)
+seekLoopL b dataTape source = seekLoopL b dataTape (moveLeft source)
+
+run dataTape source@(Tape _ (Comment _) _) = advance dataTape source
 
 advance :: Tape Int -> Tape BFCommand -> IO ()
 advance dataTape (Tape _ _ []) = return ()

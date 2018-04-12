@@ -8,6 +8,8 @@ data Hypercube = Hypercube [Int] [Float] deriving Show
 
 xpec = (\x -> sum x / (fromIntegral $ length x))
 
+
+
 testtrilst :: [(Float, Float, Int)]
 testtrilst = [(10.3,20.4,1),(14.6,11.2, 1),(22.9, 15.6, 1),(2.2,3.1,0),(1.1,2.2,0),(8.3,6.5,0),(2.5,1.3,0),(25.6,22.4,1),(16.4,19.0,1),(8.3,1.2,0),(3.1,9.2,0),(23.1,22.1,1),(3.3,3.3,0),(12.2,18.2,1),(1.1,1.1,0),(5.6,1.1,0),(11.3,19.0,1),(2.2,0.3,0),(56.3,27.3,1),(12.3,15.3,1),(9.7,7.8,0),(11.2,31.0,1),(20.9,11.3, 1),(14.3,12.4,1),(19.1,19.1,1),(6.5,3.4,0),(12.1,3.3,0),(6.7,8.9,0),(6.7,14.8,1),(1.1,2.2,1),(22.5,12.3,0),(8.9,13.2,1),(4.5,19.2,0),(18.3,19.2,1),(8.3,3.3,0),(2.1,3.1,0),(10.0,10.0,1),(10.0,9.3,0)]
 
@@ -91,6 +93,7 @@ lindisc pool x y = prior * xcondy / probx
           floatlen = fromIntegral $ length
           prior = (floatlen ylst) / (floatlen pool)
           gotx = filter (\x@(ls, rslt) -> elem x ls)
-          probx = (floatlen gotx pool) / (floatlen pool)
+          probx = (floatlen $ gotx pool) / (floatlen pool)
 
- 
+gaussdist :: Float -> Float -> Float -> Float
+gaussdist x expected variance = (1.0 / (sqrt $ 2 * pi * variance)) ^ (-0.5 * (x - variance) / variance)

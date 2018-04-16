@@ -96,7 +96,7 @@ makeLegit code
         where bias = checkBF'' (BFSequence $ parseBF code)
 
 runBF :: BFSource -> IO ()
-runBF = run emptytape . bfSourceToTape
+runBF = run emptyTape . bfSourceToTape
   where bfSourceToTape [] = Tape [] Comment []
         bfSourceToTape (b:bs) = Tape [] b bs
 
@@ -118,6 +118,7 @@ run dataTape@(Tape _ p _) source@(Tape _ LoopL _)
 run dataTape@(Tape _ p _) source@(Tape _ LoopR _)
   | p /= 0 = seekLoopL 0 dataTape source
   | otherwise = advance dataTape source
+run dataTape source@(Tape _ (Comment _) _) = advance dataTape source
 
 seekLoopR :: Int -> Tape Int -> Tape BFCommand -> IO ()
 seekLoopR 1 dataTape source@(Tape _ LoopR _) = advance dataTape source
@@ -131,7 +132,6 @@ seekLoopL b dataTape source@(Tape _ LoopL _) = seekLoopL (b-1) dataTape (moveLef
 seekLoopL b dataTape source@(Tape _ LoopR _) = seekLoopL (b+1) dataTape (moveLeft source)
 seekLoopL b dataTape source = seekLoopL b dataTape (moveLeft source)
 
-run dataTape source@(Tape _ (Comment _) _) = advance dataTape source
 
 advance :: Tape Int -> Tape BFCommand -> IO ()
 advance dataTape (Tape _ _ []) = return ()

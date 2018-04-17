@@ -33,24 +33,47 @@ bS :: String -> the string of brainfuck code
 bD :: Int -> index of brainfuck command we on 
 -}
 eMF' mS mD bS bD = if (mD == length mS) then bS else case (mS !! mD) of 
-    '+' -> if (operand == ',') then eMF' mS (succ mD) bS bD else eMF' mS (succ mD) (bSPrev ++ [nextCommand] ++ bSPost) bD
+    '+' -> if (elem operand ", ") then eMF' mS (succ mD) bS bD else eMF' mS (succ mD) (bSPrev ++ [nextCommand] ++ bSPost) bD
                 where nextCommand = (head $ tail $ dropWhile (/=(operand)) "+-<>[].,")
-    '-' -> if (operand == '+') then eMF' mS (succ mD) bS bD else eMF' mS (succ mD) (bSPrev ++ [previousCommand] ++ bSPost) bD
+    --The plus function, incrementing a BF command one up in the preset scale
+    '-' -> if (elem operand "+ ") then eMF' mS (succ mD) bS bD else eMF' mS (succ mD) (bSPrev ++ [previousCommand] ++ bSPost) bD
                 where previousCommand = (last $ takeWhile (/=(operand)) "+-<>[].,")
-    '>' -> if (bD == pred (length bS)) then eMF' mS (succ mD) bS bD else eMF' mS (succ mD) bS (succ bD)
+    --Like plus, but minus
+    '>' -> if (bD == pred (length bS) || length bS == 0) then eMF' mS (succ mD) bS bD else eMF' mS (succ mD) bS (succ bD)
+    --Move pointer one right in the BF code
     '<' -> if (bD == 0) then eMF' mS (succ mD) bS bD else eMF' mS (succ mD) bS (pred bD)
-    '[' -> if (operand == '+') then eMF' mS (mD + (length $ takeBalancedBrackets mSPost 1)) bS bD else eMF' mS (succ mD) bS bD 
+    --Move pointer one left in the BF code
+    '[' -> if (operand == '+') then eMF' mS (mD + (length $ takeBalancedBrackets mSPost 1)) bS bD else eMF' mS (succ mD) bS bD
+    --Left loop. If BF operand equals '+' (Zero), then skip the next matching right bracket, else evaluate code after leftbracket as normal
     ']' -> if (operand /= '+') then eMF' mS (mD - (length $ takeBalancedBrackets (reverse mSPrev) (-1))) bS bD else eMF' mS (succ mD) bS bD
-    _ -> eMF' (mSPrev ++ (funList !! (read (command:(takeWhile (\x -> elem x "0123456789") mS)) :: Int) ++ (dropWhile (\x -> elem x "0123456789") mSPost))) mD bS bD
+    --Right loop. If BF operand ISN'T '+' (Zero), then go back to matching left bracket and evaluate code up until it comes back to you (you being the ]), else skip
+    '.' -> eMF' mS (succ mD) (bSPrev ++ [command] ++ (operand:bSPost)) bD
+    --Print function. Insert current command in current BF index position
+    ',' -> eMF' (mSPrev ++ [operand] ++ (command:mSPost)) (succ mD) bS bD
+    --Read function. GET BF thing and put in into our mS code
+    '*' -> if (operand == ' ') then eMF' mS (succ mD) bS bD else eMF' mS (succ mD) (bSPrev ++ bSPost) bD
+    --Delete function 
+    _ -> if (num >= 0 && succ num < length funList) then eMF' (mSPrev ++ (funList !! num) ++ noInt) mD bS bD else eMF' (mSPrev ++ noInt) mD bS bD
+        where num = read (dropWhile (=='0') $ command:(takeWhile isInt mS)) :: Int
+              isInt = (\x -> elem x "0123456789")
+              noInt = (dropWhile isInt mSPost)
+    --Given a numerical sequence, match it to the index of a function in the functionlist, and replace it with that function.
     where command = mS !! mD
-          operand = bS !! bD
+          operand
+            | length bS == 0 = ' ' -- in order to handle cases where bS is a blank string
+            | otherwise = bS !! bD -- operand is just the bS character we operate on
           bSPrev = fst $ splitAt bD bS
-          bSPost = tail $ snd $ splitAt bD bS
+          bSPost
+            | bD == length bS = []
+            | otherwise = tail $ snd $ splitAt bD bS -- all BF code after the operand
           mSPrev = fst $ splitAt mD mS
-          mSPost = tail $ snd $ splitAt mD mS
-          takeBalancedBrackets (x:xs) blnc
+          mSPost = tail $ snd $ splitAt mD mS -- all mS code after the command
+          takeBalancedBrackets (x:xs) blnc -- Given a list and a "balance" (equaling left [ - right ] brackets), take from list until balance is zero
             | blnc == 0 = []
             | xs == [] = []
             | x == '[' = x:(takeBalancedBrackets xs $ succ blnc)
             | x == ']' = x:(takeBalancedBrackets xs $ pred blnc)
             | otherwise = x:(takeBalancedBrackets xs blnc)
+
+
+

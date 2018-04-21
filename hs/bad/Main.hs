@@ -1,7 +1,7 @@
 import Control.Monad
 import Data.Char
 
-main = operate upAll
+main = operate spongeboblify
 
 operate f = do
   contents <- getContents

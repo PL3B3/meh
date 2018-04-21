@@ -1,11 +1,13 @@
 module Grub () where
 
 import Data.List
+import Data.List.Split
 import Data.Maybe
 import Data.Char
+import System.Random
 --import Lang as L
 
-funList = []
+funList = ["+","-","<",">","[","]",".",","]
 
 main = do
   putStrLn "Put meta String"
@@ -27,6 +29,7 @@ evalLegitMetaFuck mStr bStr
 
 eMF' :: String -> Int -> String -> Int -> String
 {-
+mS is a string of code called metafuck which uses brainfuck symbols and applies them to brainfuck, similar to how a string of brainfuck applies to a string of numbers (a tape)
 mS :: String -> the string of metafuck code
 mD :: Int -> index of metafuck command we are on
 bS :: String -> the string of brainfuck code
@@ -51,12 +54,8 @@ eMF' mS mD bS bD = if (mD == length mS) then bS else case (mS !! mD) of
     --Print function. Insert current command in current BF index position
     ',' -> eMF' (mSPrev ++ [operand] ++ (command:mSPost)) (succ mD) bS bD
     --Read function. GET BF thing and put in into our mS code
-    '*' -> if (operand == ' ') then eMF' mS (succ mD) bS bD else eMF' mS (succ mD) (bSPrev ++ bSPost) bD
+    --'*' -> if (operand == ' ') then eMF' mS (succ mD) bS bD else eMF' mS (succ mD) (bSPrev ++ bSPost) bD
     --Delete function 
-    _ -> if (num >= 0 && succ num < length funList) then eMF' (mSPrev ++ (funList !! num) ++ noInt) mD bS bD else eMF' (mSPrev ++ noInt) mD bS bD
-        where num = read (dropWhile (=='0') $ command:(takeWhile isInt mS)) :: Int
-              isInt = (\x -> elem x "0123456789")
-              noInt = (dropWhile isInt mSPost)
     --Given a numerical sequence, match it to the index of a function in the functionlist, and replace it with that function.
     where command = mS !! mD
           operand
@@ -77,3 +76,19 @@ eMF' mS mD bS bD = if (mD == length mS) then bS else case (mS !! mD) of
 
 
 
+--createMetaFuck :: ([Int],[Int]) -> Int -> Int -> [(String, Float)] -> (([Int],[Int]) -> Float) -> String
+--createMetaFuck data@(inList, outList) codeLength numNew oldGen@((code, fitness):xs) costFunc = 
+
+genRandomCode codeLength num = do
+    gen <- getStdGen
+    let randLets = chunksOf codeLength $ take (codeLength * (num - 1)) (randomRs ('a','h') gen)
+    newGen <- newStdGen
+    let randLetsEnd = [take codeLength $ randomRs ('a','h') newGen]
+    let bfStrs = (process $ randLets ++ randLetsEnd)
+    return bfStrs
+        where process = map (\l -> map (\x -> "+-<>[].," !! (head $ findIndices (==x) "abcdefgh")) l) 
+
+balanceBrackets' (x:xs) balance
+    | not $ elem x "[]" = x:(balanceBrackets' xs balance) 
+    | x == '[' = x:(balanceBrackets' xs (succ balance))
+    | x == ']' = x:(balanceBrackets' xs (succ balance))

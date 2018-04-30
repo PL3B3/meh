@@ -44,8 +44,3 @@ set a tape to state X,
 run BF_Code,
 set BF_Code to the output, and repeat the loop untill you get Y. 
 
-<!-- from meh.hs -->
-<!-- Q!, 10-5-17
-We desire insight on desire.
-End goal is to formulate a map of what people want. Very difficult.
-What people want is manifested in  -->

@@ -91,4 +91,11 @@ genRandomCode codeLength num = do
 balanceBrackets' (x:xs) balance
     | not $ elem x "[]" = x:(balanceBrackets' xs balance) 
     | x == '[' = x:(balanceBrackets' xs (succ balance))
-    | x == ']' = x:(balanceBrackets' xs (succ balance))
+    | otherwise = x:(balanceBrackets' xs (succ balance))
+
+startWithLeftBracket (x:xs)
+    | not $ elem x "[]" = x:(startWithLeftBracket xs)
+    | x == ']' = '[':(startWithLeftBracket xs)
+    | otherwise = x:xs
+
+evenOutBrackets (x:xs) = if (length $ )

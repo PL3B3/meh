@@ -8,6 +8,7 @@ import System.Random
 --import Lang as L
 
 funList = ["+","-","<",">","[","]",".",","]
+countLim = 100000
 
 main = do
   putStrLn "Put meta String"
@@ -19,12 +20,12 @@ main = do
 --costFunc :: [L.Tape a] -> (L.Tape a -> L.Tape a) -> (L.Tape a -> L.Tape a -> Int) -> ([Int] -> Float) -> Float
 --costFunc testList funcToTest errorFunc cumeFunc = cumeFunc $ zipWith errorFunc testList (map funcToTest testList)
 
-evalMetaFuck mStr bStr = eMF' mStr 0 bStr 0
+evalMetaFuck mStr bStr = eMF' mStr 0 bStr 0 0
 
 evalLegitMetaFuck :: String -> String -> Maybe String
 evalLegitMetaFuck mStr bStr
     | count '[' mStr /= count ']' mStr = Nothing 
-    | otherwise = Just (eMF' mStr 0 bStr 0)
+    | otherwise = Just (eMF' mStr 0 bStr 0 0)
         where count a = length . (filter (==a)) 
 
 eMF' :: String -> Int -> String -> Int -> String
@@ -35,24 +36,24 @@ mD :: Int -> index of metafuck command we are on
 bS :: String -> the string of brainfuck code
 bD :: Int -> index of brainfuck command we on 
 -}
-eMF' mS mD bS bD = if (mD == length mS) then bS else case (mS !! mD) of 
-    '+' -> if (elem operand ", ") then eMF' mS (succ mD) bS bD else eMF' mS (succ mD) (bSPrev ++ [nextCommand] ++ bSPost) bD
+eMF' mS mD bS bD cT = if (mD == length mS || cT = countLim) then bS else case (mS !! mD) of 
+    '+' -> if (elem operand ", ") then eMF' mS (succ mD) bS bD (succ cT) else eMF' mS (succ mD) (bSPrev ++ [nextCommand] ++ bSPost) bD (succ cT)
                 where nextCommand = (head $ tail $ dropWhile (/=(operand)) "+-<>[].,")
     --The plus function, incrementing a BF command one up in the preset scale
-    '-' -> if (elem operand "+ ") then eMF' mS (succ mD) bS bD else eMF' mS (succ mD) (bSPrev ++ [previousCommand] ++ bSPost) bD
+    '-' -> if (elem operand "+ ") then eMF' mS (succ mD) bS bD (succ cT) else eMF' mS (succ mD) (bSPrev ++ [previousCommand] ++ bSPost) bD (succ cT)
                 where previousCommand = (last $ takeWhile (/=(operand)) "+-<>[].,")
     --Like plus, but minus
-    '>' -> if (bD == pred (length bS) || length bS == 0) then eMF' mS (succ mD) bS bD else eMF' mS (succ mD) bS (succ bD)
+    '>' -> if (bD == pred (length bS) || length bS == 0) then eMF' mS (succ mD) bS bD (succ cT) else eMF' mS (succ mD) bS (succ bD) (succ cT)
     --Move pointer one right in the BF code
-    '<' -> if (bD == 0) then eMF' mS (succ mD) bS bD else eMF' mS (succ mD) bS (pred bD)
+    '<' -> if (bD == 0) then eMF' mS (succ mD) bS bD (succ cT) else eMF' mS (succ mD) bS (pred bD) (succ cT)
     --Move pointer one left in the BF code
-    '[' -> if (operand == '+') then eMF' mS (mD + (length $ takeBalancedBrackets mSPost 1)) bS bD else eMF' mS (succ mD) bS bD
+    '[' -> if (operand == '+') then eMF' mS (mD + (length $ takeBalancedBrackets mSPost 1)) bS bD (succ cT) else eMF' mS (succ mD) bS bD (succ cT)
     --Left loop. If BF operand equals '+' (Zero), then skip the next matching right bracket, else evaluate code after leftbracket as normal
-    ']' -> if (operand /= '+') then eMF' mS (mD - (length $ takeBalancedBrackets (reverse mSPrev) (-1))) bS bD else eMF' mS (succ mD) bS bD
+    ']' -> if (operand /= '+') then eMF' mS (mD - (length $ takeBalancedBrackets (reverse mSPrev) (-1))) bS bD (succ cT) else eMF' mS (succ mD) bS bD (succ cT)
     --Right loop. If BF operand ISN'T '+' (Zero), then go back to matching left bracket and evaluate code up until it comes back to you (you being the ]), else skip
-    '.' -> eMF' mS (succ mD) (bSPrev ++ [command] ++ (operand:bSPost)) bD
+    '.' -> eMF' mS (succ mD) (bSPrev ++ [command] ++ (operand:bSPost)) bD (succ cT)
     --Print function. Insert current command in current BF index position
-    ',' -> eMF' (mSPrev ++ [operand] ++ (command:mSPost)) (succ mD) bS bD
+    ',' -> eMF' (mSPrev ++ [operand] ++ (command:mSPost)) (succ mD) bS bD (succ cT)
     --Read function. GET BF thing and put in into our mS code
     --'*' -> if (operand == ' ') then eMF' mS (succ mD) bS bD else eMF' mS (succ mD) (bSPrev ++ bSPost) bD
     --Delete function 
@@ -88,7 +89,37 @@ genRandomCode codeLength num = do
     return bfStrs
         where process = map (\l -> map (\x -> "+-<>[].," !! (head $ findIndices (==x) "abcdefgh")) l) 
 
+unmatchedBrackets list = sum 
+    where bcktOnly = filter (\x -> elem x "[]") list
+
+
+
+{-
+makeLegit str = matchBrackets .evenBrackets . startWithLeftBracket $ str
+
 balanceBrackets' (x:xs) balance
     | not $ elem x "[]" = x:(balanceBrackets' xs balance) 
     | x == '[' = x:(balanceBrackets' xs (succ balance))
     | x == ']' = x:(balanceBrackets' xs (succ balance))
+
+startWithLeftBracket (x:xs)
+    | not $ elem x "[]" = x:(startWithLeftBracket xs)
+    | x == ']' = '[':(startWithLeftBracket xs)
+    | otherwise = x:xs
+
+endWithRightBracket (x:xs)
+    | not $ elem x "[]" = x:(endWithRightBracket xs)
+    | x == '[' = ']':(endWithRightBracket xs)
+    | otherwise = x:xs
+
+evenBrackets (x:xs) = 
+{-
+Takes a list with an odd number of brackets and replaces one non-bracket character with a bracket
+-}
+
+matchBrackets (x:xs) balance
+    |  
+    | 
+        where numBrackets = length $ filter (\x -> elem x "[]") (x:xs)
+              mid = numBrackets / 2
+-}

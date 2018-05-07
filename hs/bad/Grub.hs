@@ -7,6 +7,18 @@ import Data.Char
 import System.Random
 --import Lang as L
 
+data Mf = String
+data Bf = String
+
+data In = { ins :: String 
+    , outs :: String 
+    , perf :: String -> String -> Float 
+    , score :: Float
+}
+
+data 
+
+
 funList = ["+","-","<",">","[","]",".",","]
 countLim = 100000
 
@@ -28,7 +40,7 @@ evalLegitMetaFuck mStr bStr
     | otherwise = Just (eMF' mStr 0 bStr 0 0)
         where count a = length . (filter (==a)) 
 
-eMF' :: String -> Int -> String -> Int -> String
+eMF' :: String -> Int -> String -> Int -> Int -> String
 {-
 mS is a string of code called metafuck which uses brainfuck symbols and applies them to brainfuck, similar to how a string of brainfuck applies to a string of numbers (a tape)
 mS :: String -> the string of metafuck code
@@ -36,7 +48,7 @@ mD :: Int -> index of metafuck command we are on
 bS :: String -> the string of brainfuck code
 bD :: Int -> index of brainfuck command we on 
 -}
-eMF' mS mD bS bD cT = if (mD == length mS || cT = countLim) then bS else case (mS !! mD) of 
+eMF' mS mD bS bD cT = if (mD == length mS || cT == countLim) then bS else case (mS !! mD) of 
     '+' -> if (elem operand ", ") then eMF' mS (succ mD) bS bD (succ cT) else eMF' mS (succ mD) (bSPrev ++ [nextCommand] ++ bSPost) bD (succ cT)
                 where nextCommand = (head $ tail $ dropWhile (/=(operand)) "+-<>[].,")
     --The plus function, incrementing a BF command one up in the preset scale

@@ -27,15 +27,19 @@ type LayerNew = [Float]
 
 type WeightsNew = [Float]
 
+data Network = Network [WeightsNew] [LayerNew] [([Float] -> Float -> Float)]
+
 data Weights = Weights [(Int, Int, Float)]
 {-
     Type for the weights between two layers. 
     It is a list of tuples consisting of (startnodeindex) (endnodeindex) and (weight)
 -}
 
+calcNetWork :: Network -> Network
+calcNetWork (Network weights layers activs) = Network weights (layersApply weights layers activs) activs 
+
 layersApply :: [WeightsNew] -> [LayerNew] -> [([Float] -> Float -> Float)] -> [LayerNew]
-layersApply weights layers activations = foldl' 
-    where apply fun floatlist laya = zipWith fun floatlist laya 
+layersApply weights layers activations = reverse $ foldl (\l w -> (zipWith (activations !! (length l)) (weightsToVals w (layers !! (length l))) (layers !! (succ $ length l))):l) [] weights
 
 weightsToVals :: WeightsNew -> LayerNew -> [[Float]] 
 weightsToVals weights layer

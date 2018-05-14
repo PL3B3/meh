@@ -1,24 +1,31 @@
 module Layer 
 (
-    Node(..),
     Layer,
     Weights,
 ) where
 
-data Node = Node
+import qualified Data.Sequence as S
 {-
+data Node = Node
+
 Type for a single node , or neuron , of the network
--}
-{
+
+
     activation :: ([Float] -> Float),
     value :: Float,
     threshold :: Float
-}
+-}
 
-data Layer = Layer [Node]
+data Layer = Int
 {-
     Type for a layer of neurons
 -}
+
+data NodeNew = Float
+
+type LayerNew = [Float] 
+
+type WeightsNew = [Float]
 
 data Weights = Weights [(Int, Int, Float)]
 {-
@@ -26,6 +33,19 @@ data Weights = Weights [(Int, Int, Float)]
     It is a list of tuples consisting of (startnodeindex) (endnodeindex) and (weight)
 -}
 
+layersApply :: [WeightsNew] -> [LayerNew] -> [([Float] -> Float -> Float)] -> [LayerNew]
+layersApply weights layers activations = foldl' 
+    where apply fun floatlist laya = zipWith fun floatlist laya 
+
+weightsToVals :: WeightsNew -> LayerNew -> [[Float]] 
+weightsToVals weights layer
+    | weights == [] = []
+    | otherwise = [(zipWith (*) stuff layer)] ++ (weightsToVals rest layer)
+        where len = length layer 
+              stuff = take len weights
+              rest = drop len weights
+
+{-
 applyWeights :: Weights -> Layer -> Layer -> Layer
 {-
     Takes a weights scheme, the input and output layer, and returns the output layer  
@@ -35,6 +55,7 @@ applyWeights (Weights weightList) (Layer inputs) (Layer outputs) = foldl' weight
           getBefore list num = reverse $ tail $ reverse $ fst $ splitAt list num  
           getCurrentElem list num = last $ fst $ splitAt list num
           getAfter list num = snd $ splitAt list num
+-}
 
 f2r f
     | closeToFloor f = (floor f, 1)

@@ -1,47 +1,51 @@
 module Layer 
 (
-    Layer,
-    Weights,
+    Network(..),
+    Layer(..),
+    Weights(..),
+    makeNetwork,
+    calcNetwork,
+    layersApply,
+    weightsToVals,
+    f2r
 ) where
 
 import qualified Data.Sequence as S
-{-
-data Node = Node
 
-Type for a single node , or neuron , of the network
+--Layer in a neural network
+type Layer = [Float] 
 
+--The weights have a length equal to (layer before) * (layer after)
+--Each segment of length (layer before) of the weights is multiplied by their corresponding element of layer before
+type Weights = [Float]
 
-    activation :: ([Float] -> Float),
-    value :: Float,
-    threshold :: Float
--}
+--Just a way to hold data together
+data Network = Network {
+    weights :: [Weights],
+    layers :: [Layer],
+    afuncs :: [[Float] -> Float -> Float]
+}
 
-data Layer = Int
-{-
-    Type for a layer of neurons
--}
+makeNetwork :: [Int] -> Network
+makeNetwork dims = Network {weights=weights, layers=layers, afuncs=(repeat (\a b -> sum a + b))}
+    where len = length dims
+          layers = map (\a -> take a $ repeat 1.0) dims
+          weights = map (\x -> take x (repeat 1.0)) (mult dims)
+          mult ls@(x:y:ys)
+            | ls == [] = []
+            | ys == [] = [x * y]
+            | otherwise = (x * y):mult (y:ys) 
 
-data NodeNew = Float
+calcNetwork :: Network -> Network
+calcNetwork net = Network {weights=w, layers=(layersApply w l a), afuncs=a} 
+    where w = weights net
+          l = layers net
+          a = afuncs net
 
-type LayerNew = [Float] 
-
-type WeightsNew = [Float]
-
-data Network = Network [WeightsNew] [LayerNew] [([Float] -> Float -> Float)]
-
-data Weights = Weights [(Int, Int, Float)]
-{-
-    Type for the weights between two layers. 
-    It is a list of tuples consisting of (startnodeindex) (endnodeindex) and (weight)
--}
-
-calcNetWork :: Network -> Network
-calcNetWork (Network weights layers activs) = Network weights (layersApply weights layers activs) activs 
-
-layersApply :: [WeightsNew] -> [LayerNew] -> [([Float] -> Float -> Float)] -> [LayerNew]
+layersApply :: [Weights] -> [Layer] -> [([Float] -> Float -> Float)] -> [Layer]
 layersApply weights layers activations = reverse $ foldl (\l w -> (zipWith (activations !! (length l)) (weightsToVals w (layers !! (length l))) (layers !! (succ $ length l))):l) [] weights
 
-weightsToVals :: WeightsNew -> LayerNew -> [[Float]] 
+weightsToVals :: Weights -> Layer -> [[Float]] 
 weightsToVals weights layer
     | weights == [] = []
     | otherwise = [(zipWith (*) stuff layer)] ++ (weightsToVals rest layer)
@@ -76,3 +80,18 @@ f2r f
               tail = f - (fromIntegral $ floor f) 
               invs = 1.0 / f
               invsTail = 1.0 / tail
+
+{-
+makeNetwork :: [Int] -> Network
+makeNetwork dims = Network weights layers (repeat (\a b -> sum a + b))
+    where len = length dims
+          layers = map (\a -> take a $ repeat 1.0) dims
+          weights = map (\x -> take x (repeat 1.0)) (mult dims)
+          mult (x:y:ys)
+            | ys == [] = []
+            | otherwise = (x * y):mult (y:ys) 
+
+
+calcNetwork :: Network -> Network
+calcNetwork (Network weights layers activs) = Network weights (layersApply weights layers activs) activs 
+-}

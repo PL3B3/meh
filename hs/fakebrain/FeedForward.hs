@@ -1,9 +1,12 @@
 module FeedForward
 (
-    Training
+    Training,
+    cost,
+    backPropagate
 ) where
 
 import Layer
+import System.Random
 
 type Training = [(Layer, Layer)] 
 
@@ -17,3 +20,4 @@ cost net training = sum evaluated
           evaluated = foldl (\x y -> (compareFloatLists (last $ layers $ newNetwork (fst y)) (snd y)):x) [] training
 
 --backPropagate :: Network -> Training -> Network
+

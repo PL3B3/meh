@@ -13,17 +13,17 @@ module Layer
 import qualified Data.Sequence as S
 
 --Layer in a neural network
-type Layer = [Float] 
+type Layer = [Double] 
 
 --The weights have a length equal to (layer before) * (layer after)
 --Each segment of length (layer before) of the weights is multiplied by their corresponding element of layer before
-type Weights = [Float]
+type Weights = [Double]
 
 --Just a way to hold data together
 data Network = Network {
     weights :: [Weights],
     layers :: [Layer],
-    afuncs :: [[Float] -> Float -> Float]
+    afuncs :: [[Double] -> Double -> Double]
 }
 
 makeNetwork :: [Int] -> Network
@@ -42,10 +42,10 @@ calcNetwork net = Network {weights=w, layers=(layersApply w l a), afuncs=a}
           l = layers net
           a = afuncs net
 
-layersApply :: [Weights] -> [Layer] -> [([Float] -> Float -> Float)] -> [Layer]
+layersApply :: [Weights] -> [Layer] -> [([Double] -> Double -> Double)] -> [Layer]
 layersApply weights layers activations = reverse $ foldl (\l w -> (zipWith (activations !! (length l)) (weightsToVals w (layers !! (length l))) (layers !! (succ $ length l))):l) [] weights
 
-weightsToVals :: Weights -> Layer -> [[Float]] 
+weightsToVals :: Weights -> Layer -> [[Double]] 
 weightsToVals weights layer
     | weights == [] = []
     | otherwise = [(zipWith (*) stuff layer)] ++ (weightsToVals rest layer)
@@ -58,8 +58,8 @@ applyWeights :: Weights -> Layer -> Layer -> Layer
 {-
     Takes a weights scheme, the input and output layer, and returns the output layer  
 -}
-applyWeights (Weights weightList) (Layer inputs) (Layer outputs) = foldl' weightToFloatList outputs weights
-    where weightToFloatList = (\x, y@(start, end, weight) -> splitAt end x (inputs !! start) * ])
+applyWeights (Weights weightList) (Layer inputs) (Layer outputs) = foldl' weightToDoubleList outputs weights
+    where weightToDoubleList = (\x, y@(start, end, weight) -> splitAt end x (inputs !! start) * ])
           getBefore list num = reverse $ tail $ reverse $ fst $ splitAt list num  
           getCurrentElem list num = last $ fst $ splitAt list num
           getAfter list num = snd $ splitAt list num

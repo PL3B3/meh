@@ -23,7 +23,7 @@ funList = ["+","-","<",">","[","]",".",","]
 countLim = 100000
 
 main = do
-  putStrLn "Put meta String"
+  putStrLn "Put meta String"    
   ms <- getLine
   putStrLn "Put BF String"
   bs <- getLine
@@ -100,11 +100,6 @@ genRandomCode codeLength num = do
     let bfStrs = (process $ randLets ++ randLetsEnd)
     return bfStrs
         where process = map (\l -> map (\x -> "+-<>[].," !! (head $ findIndices (==x) "abcdefgh")) l) 
-
-unmatchedBrackets list = sum 
-    where bcktOnly = filter (\x -> elem x "[]") list
-
-
 
 {-
 makeLegit str = matchBrackets .evenBrackets . startWithLeftBracket $ str

@@ -14,7 +14,7 @@ data Net = Net [Matrix Double] [[Double]]
 
 type Training = [(Layer, Layer)] 
 
-cost :: Network -> Training -> Float
+cost :: Network -> Training -> Double
 cost net training = sum evaluated
     where newNetwork iputs = calcNetwork Network {weights=w, layers=iputs:(tail l), afuncs=a}
           w = weights net
@@ -25,3 +25,5 @@ cost net training = sum evaluated
 
 --backPropagate :: Network -> Training -> Network
 
+=======
+>>>>>>> dbc4a742da1b77f9870096d7113a541be6abf6eb

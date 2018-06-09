@@ -6,7 +6,11 @@ module FeedForward
 ) where
 
 import Layer
+import MatrixMaths
 import System.Random
+
+--Neural network datatype: Array of weights and biases
+data Net = Net [Matrix Double] [[Double]]
 
 type Training = [(Layer, Layer)] 
 

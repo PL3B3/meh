@@ -11,6 +11,7 @@ module Layer
 ) where
 
 import qualified Data.Sequence as S
+import MatrixMaths
 
 --Layer in a neural network
 type Layer = [Float] 

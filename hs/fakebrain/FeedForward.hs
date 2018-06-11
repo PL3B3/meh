@@ -32,12 +32,15 @@ activation a = case a of
 
 activationDeriv :: Activation -> (Double -> Double)
 activationDeriv a = case a of
+  | SIG -> (\x -> (exp (-x)) / ((1.0 + (exp (-x))) ^ 2))
+  | TANH -> (\x -> 4.0 * (exp ((-2) * x)) / ((1.0 + (exp ((-2) * x))) ^ 2))
   
 
+--FeedsForward a matrix from input. Outputs a list (head:tail) where head is the final output, and tail is the z-values (w . a + b), which is basically the values without the activation, in reverse order from final layer
 calcMatrix :: Net -> [Double] -> [[Double]]
-calcMatrix (Net layers) inputs = foldl (\x@(x:xs) y@(weights,biases,activ) -> (activation activ $ calc x weights biases) ++ xs ++ [calc x weights biases]) [inputs] layers
+calcMatrix (Net layers) inputs = (\a@(g:gs) -> g:(reverse gs)) foldl (\x@(x:xs) y@(weights,biases,activ) -> (activation activ $ calc x weights biases) ++ xs ++ [calc x weights biases]) [inputs] layers
   where calc a w b = zipWith (+) (matrixByVec w a) b
 
-
-
---backPropagate :: Network -> Training -> Network
+--Just get the gradients boy
+getGradients :: [[Double]] -> [[Double]]
+getGradients (finalActivs:zs)

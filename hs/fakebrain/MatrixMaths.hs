@@ -2,6 +2,7 @@ module MatrixMaths
 (
   Matrix,
   Coord,
+  matrix,
   scalarMult,
   transposeMulti,
   unwrapCoordinate,
@@ -29,6 +30,9 @@ tc = Coord [2,1,1]
 
 tm1 = Matrix [2,3] [1.0,2.0,3.0,4.0,5.0,6.0]
 tm2 = Matrix [3,2] [7.0,8.0,9.0,10.0,11.0,12.0]
+
+matrix :: [Int] -> [a] -> Matrix a
+matrix a b = Matrix a b
 
 --Multiply everything in a matrix by some number
 scalarMult :: (Num a) => Matrix a -> a -> Matrix a

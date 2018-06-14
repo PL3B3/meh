@@ -42,5 +42,6 @@ calcMatrix (Net layers) inputs = (\a@(g:gs) -> g:(reverse gs)) foldl (\x@(x:xs) 
   where calc a w b = zipWith (+) (matrixByVec w a) b
 
 --Just get the gradients boy
-getGradients :: [[Double]] -> [[Double]]
-getGradients (finalActivs:zs)
+getGradients :: Net -> [Double] -> [[Double]]
+getGradients net ins = [] ++
+  where values = calcMatrix net ins

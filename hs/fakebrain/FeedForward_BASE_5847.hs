@@ -22,17 +22,8 @@ cost net training = sum evaluated
           w = weights net
           l = layers net
           a = afuncs net  
-          compareFloatLists a b = sum $ zipWith (\x y -> 0.5 * (x - y) ^2) a b
+          compareFloatLists a b = sum $ zipWith (\x y -> (x - y) ^2) a b
           evaluated = foldl (\x y -> (compareFloatLists (last $ layers $ newNetwork (fst y)) (snd y)):x) [] training
-
-fst3 :: (a, a, a) -> a
-fst3 (g, _, _) = g
-
-snd3 :: (a, a, a) -> a
-snd3 (_, g, _) = g
-
-thr3 :: (a, a, a) -> a
-thr3 (_, _, g) = g
 
 activation :: Activation -> (Double -> Double)
 activation a = case a of
@@ -50,19 +41,6 @@ calcMatrix :: Net -> [Double] -> [[Double]]
 calcMatrix (Net layers) inputs = (\a@(g:gs) -> g:(reverse gs)) foldl (\x@(x:xs) y@(weights,biases,activ) -> (activation activ $ calc x weights biases) ++ xs ++ [calc x weights biases]) [inputs] layers
   where calc a w b = zipWith (+) (matrixByVec w a) b
 
-<<<<<<< HEAD
 --Just get the gradients boy
-getGradients :: Net -> [Double] -> [[Double]]
-getGradients net ins = [] ++
-  where values = calcMatrix net ins
-=======
---List of LAYER gradients, from first layer to last layer, BUT not the ACTUAL GRADIENTS per weight and bias
-getGradients :: Net -> [Double] -> [Double] -> [[Double]]
-getGradients (Net layers) ins targets = reverse $ outputGradients: 
-  where values = calcMatrix net ins
-        outs = head values
-        outzs = head $ tail values
-        zs = tail $ tail values
-        outputGradients = foldl (\x y -> (((outs !! y) - (targets !! y)) * (activationDeriv (thr3 $ layers !! y) $ outzs !! y)):x) [] [0..(pred $ length targets)]
-        layerGradients = 
->>>>>>> c3fce121c5781214f35ef80ff1bdddd3cf4f7a9a
+getGradients :: [[Double]] -> [[Double]]
+getGradients (finalActivs:zs)

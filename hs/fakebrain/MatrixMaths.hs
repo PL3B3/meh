@@ -16,7 +16,8 @@ module MatrixMaths
   multMatrix,
   chunksOf,
   transpose,
-  valsFromMatrix
+  valsFromMatrix,
+  dimsFromMatrix
 ) where
 
 --Matrix consists of a list of integers which are the dimensions (x, y, z, and more) and a bunch of floats which are the data
@@ -78,6 +79,10 @@ coordinateOfIndex (Matrix dimensions values) num = Coord (tail $ foldl (\x@(a:as
 --It's S E L F E X P L A N A T O R Y
 valsFromMatrix :: Matrix a -> [a]
 valsFromMatrix (Matrix dims vals) = vals
+
+--S A M E T H I N G
+dimsFromMatrix :: Matrix a -> [Int]
+dimsFromMatrix (Matrix dims vals) = dims
 
 --Gets the value at a coordinate
 valOfCoordinate :: Matrix a -> Coord -> a

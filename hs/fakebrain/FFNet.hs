@@ -1,4 +1,4 @@
-module FeedForward
+module FFNet
 (
     Net,
     Activation,
@@ -9,34 +9,25 @@ module FeedForward
     activationDeriv,
     calcMatrix,
     calcActivations,
-    getGradients,
-    getGradientNet,
+    quadCost,
+    crossEntropyCost,
+    crossEntropyCostLs,
+    makeNet,
+    crossGradients,
+    crossGradientNet,
+    crossProp,
+    crossLs,
+    cross,
+    thiccboi,    
     sumNets,
     addTwoNets,
     divideNetByScalar,
     averageNets,
-    backPropagate,
-    iterativeBackProp
+    speedeePULLOUT
 ) where
 
 import MatrixMaths
 import System.Random
-
-tIns = repeatList [[1.0,1.0],[1.0,0.0],[0.0,1.0],[0.0,0.0]] 300
-tOuts = repeatList [[1.0],[0.0],[0.0],[0.0]] 300
-
-ti2 = repeatList [[1.0], [0.0]] 300 
-to2 = repeatList [[0.0], [1.0]] 300
-
-bob = makeNet 0.1 [1,1] SIG
-bob2 = iterativeBackProp bob 0.015 ti2 to2 300 2
-
-tCost2 n = zipWith (\a b -> quadCost n a b) (take 2 ti2) (take 2 to2)
-
-n = makeNet 0.1 [2,6,1] SIG
-n1 = iterativeBackProp n 0.015 tIns tOuts 300 4
-
-tCost n ins out = zipWith (\a b -> quadCost n a b) (take ins tIns) (take out tOuts)
 
 repeatList ls num
   | num == 0 = []
@@ -46,6 +37,8 @@ repeatList ls num
 data Net = Net [(Matrix Double, [Double], Activation)] deriving (Show, Eq)
 
 data Activation = SIG | TANH deriving (Show, Eq)
+
+type Pairlist = [([Double],[Double])]
 
 tNet = Net [(tm,(take 4 $ repeat 0.2), SIG),(tm2,(take 2 $ repeat 0.2), SIG)]
 
@@ -82,10 +75,17 @@ crossEntropyCost net ins tgt = (-1.0) * (1.0 / (fromIntegral $ length tgt)) * lo
   where logsum = sum $ zipWith (\x y -> (y * (log x)) + ((1.0 - y) * (log (1.0 - x)))) outs tgt
         outs = head $ calcMatrix net ins 
 
+crossEntropyCostLs :: Net -> Pairlist -> Double
+crossEntropyCostLs net pairs = sum $ zipWith (\x y -> crossEntropyCost net x y) (map fst pairs) (map snd pairs)
+
 --FeedsForward a matrix from input. Outputs a list (head:tail) where head is the final output, and tail is the z-values (w . a + b), which is basically the values without the activation, in reverse order from final layer
 calcMatrix :: Net -> [Double] -> [[Double]]
 calcMatrix (Net layers) inputs = (\a@(g:gs) -> g:(reverse gs)) (foldl (\b@(x:xs) y@(weights,biases,activ) -> [(map (activation activ) (calc x weights biases))] ++ xs ++ [calc x weights biases]) [inputs] layers)
   where calc a w b = zipWith (+) (matrixByVec w a) b
+
+--Same as calcMatrix except softmax activs applied to the final layer
+calcMatrixSoftMax :: Net -> [Double] -> [[Double]]
+calcMatrixSoftMax net@(Net layers) ins = (\a@(x:y:ys) -> [(map (\b -> ((exp b) / (sum $ map exp y))) y)] ++ y:ys)$ calcMatrix net ins
 
 --FeedForward. Ordered list of activations, including final output layer
 calcActivations :: Net -> [Double] -> [[Double]]
@@ -97,40 +97,6 @@ crossGradients net@(Net layers) ins tgt = grads
   where vals@(out:outz:zs) = calcMatrix net ins
         finals = foldl (\x y -> x ++ [(((out !! y) - (tgt !! y)) / ((out !! y) * (1.0 - (out !! y)))) * (activationDeriv (thr3 $ layers !! y) $ outz !! y)]) [] [0..(pred $ length out)]
         grads = foldl (\a b -> (hMult (matrixByVec (transpose $ fst3 $ layers !! (succ b)) (head a)) (map (activationDeriv (thr3 $ layers !! b)) (zs !! b)):a)) [finals] (reverse $ [0..((length layers) - 2)])
-
-getGradientsCrossEntropy :: Net -> [Double] -> [Double] -> [[Double]]
-getGradientsCrossEntropy net@(Net layers) ins targets = reverse layerGradients
-  where values = calcMatrix net ins
-        outs = head values
-        outzs = head $ tail values
-        zs = tail $ tail values
-        headneck g = reverse $ tail $ reverse g
-        outputGradients = foldl (\x y -> (((outs !! y) - (targets !! y)) / ((outs !! y) * (1.0 - (outs !! y)))):x) [] [0..(pred $ length targets)]
-        layerGradients = foldl (\a b -> a ++ [hMult (matrixByVec (transpose $ fst3 $ layers !! (succ b)) (last a)) (map (activationDeriv (thr3 $ layers !! b)) (zs !! b))]) [outputGradients] (reverse $ [0..((length layers) - 2)])
-
---List of LAYER gradients, from first layer to last layer, BUT not the ACTUAL GRADIENTS per weight and bias -- Gradients based on 1/2 (y - ypred) ^ 2
-getGradients :: Net -> [Double] -> [Double] -> [[Double]]
-getGradients net@(Net layers) ins targets = reverse layerGradients
-  where values = calcMatrix net ins
-        outs = head values
-        outzs = head $ tail values
-        zs = tail $ tail values
-        headneck g = reverse $ tail $ reverse g
-        outputGradients = foldl (\x y -> (((outs !! y) - (targets !! y)) * (activationDeriv (thr3 (layers !! y)) $ outzs !! y)):x) [] [0..(pred $ length targets)]
-        layerGradients = foldl (\a b -> a ++ [hMult (matrixByVec (transpose $ fst3 $ layers !! (succ b)) (last a)) (map (activationDeriv (thr3 $ layers !! b)) (zs !! b))]) [outputGradients] (reverse $ [0..((length layers) - 2)])
-
---Converts Raw layergradients to gradients for weights and biases, ordered from first to last
-getGradientNet :: Net -> [Double] -> [Double] -> Net
-getGradientNet net@(Net layers) ins outs = Net (reverse nablas)
-  where gradients = getGradients net ins outs
-        activs = ins:(reverse $ tail $ reverse $ calcActivations net ins)
-        nablas = foldl (\x y -> ((matrix (dimsFromMatrix (fst3 (layers !! y))) (foldl (\h j -> h ++ (map (\a -> a * j) (gradients !! y))) [] (activs !! y))), (gradients !! y), (thr3 (layers !! y))):x) [] [0..(pred $ length gradients)]
-
-getGradientNetCrossEntropy :: Net -> [Double] -> [Double] -> Net
-getGradientNetCrossEntropy net@(Net layers) ins outs = Net (reverse nablas)
-  where gradients = getGradientsCrossEntropy net ins outs
-        activs = ins:(reverse $ tail $ reverse $ calcActivations net ins)
-        nablas = foldl (\x y -> ((matrix (dimsFromMatrix (fst3 (layers !! y))) (foldl (\h j -> h ++ (map (\a -> a * j) (gradients !! y))) [] (activs !! y))), (gradients !! y), (thr3 (layers !! y))):x) [] [0..(pred $ length gradients)]
 
 
 crossGradientNet :: Net -> [Double] -> [Double] -> Net
@@ -145,19 +111,21 @@ crossProp n i o r e
   | e == 0 = n
   | otherwise = crossProp (addTwoNets n (divideNetByScalar (crossGradientNet n i o) (-(r)))) i o r (pred e)
 
+--I am presented with a net, also a sample of data, and I gradient DESCANT to produce the final product
+cross net pairlist r8 = addTwoNets net (divideNetByScalar (averageNets (map (\a@(i,o) -> crossGradientNet net i o) pairlist)) (-r8))
+
+--I do cross but many list
 crossLs net pairlist r8 gens num
   | gens == 0 = net
   | otherwise = crossLs (cross net (take num pairlist) r8) (drop num pairlist) r8 (pred gens) num
 
-cross net pairlist r8 = addTwoNets net (divideNetByScalar (averageNets (map (\a@(i,o) -> crossGradientNet net i o) pairlist)) (-r8))
-
-
+--Generates a thiccboi, who predic data with HIGH accurate
 thiccboi :: Int -> Net -> [([Double],[Double])] -> Double -> Int -> Int -> IO ([Double])
 thiccboi genr8r net samps rate gens num = do
   let dexes = take (num * gens) $ randomRs (0,(pred $ length samps)) (mkStdGen genr8r)
       boi = crossLs net (foldl (\a b -> a ++ [samps !! b]) [] dexes) rate gens num
   putStrLn $ show boi
-  return (tCost2 boi)  
+  return (zipWith (\x y -> quadCost boi x y) (map fst samps) (map snd samps))  
 
 --Sums a bunch of nets
 sumNets :: [Net] -> Net
@@ -179,21 +147,11 @@ divideNetByScalar (Net layers) num = Net (map (\l@(w, b, a) -> (scalarMult w num
 averageNets :: [Net] -> Net
 averageNets nets = divideNetByScalar (sumNets nets) (fromIntegral $ length nets) 
 
---BackPropagation by taking a sample of inputs and target outputs, getting gradients based off that, and using it to tweak a net by a little
-backPropagate :: Net -> Double -> [[Double]] -> [[Double]] -> Net
-backPropagate net@(Net layers) rate ins outs = addTwoNets net (divideNetByScalar (averageNets (map (\a@(i,o) -> getGradientNet net i o) (zip ins outs))) ((-1.0) / rate))
-
-
-gradientDescant :: Net -> Double -> [[Double]] -> [[Double]] -> Net
-gradientDescant net@(Net layers) rate ins outs = addTwoNets net (divideNetByScalar (averageNets (map (\a@(i,o) -> getGradientNetCrossEntropy net i o) (zip ins outs))) ((-1.0) / rate))
-
---BackPropagation with eons. ins and outs have a length which is a multiple of the number of examples we take per generation 
-iterativeBackProp :: Net -> Double -> [[Double]] -> [[Double]] -> Int -> Int -> Net
-iterativeBackProp n r i o eons numPerGen
-  | eons == 0 = n
-  | otherwise = iterativeBackProp (backPropagate n r (take numPerGen i) (take numPerGen o)) r (drop numPerGen i) (drop numPerGen o) (pred eons) numPerGen
-
-iterativeDescant :: Net -> Double -> [[Double]] -> [[Double]] -> Int -> Int -> Net
-iterativeDescant n r i o eons numPerGen
-  | eons == 0 = n
-  | otherwise = iterativeBackProp (gradientDescant n r (take numPerGen i) (take numPerGen o)) r (drop numPerGen i) (drop numPerGen o) (pred eons) numPerGen
+--If the SUCC game is FEEBLE and UNWORTHY, is a man not ENTITLED to PULLOUT?
+speedeePULLOUT :: Net -> [([Double],[Double])] -> [([Double],[Double])] -> [Double] -> Double -> Int -> Int -> Net
+speedeePULLOUT net pairlist validation costTrends rate epochs batchsize
+  | epochs == 0 || flatTrend costTrends = net
+  | otherwise = speedeePULLOUT (cross net (take batchsize pairlist) rate) (drop batchsize pairlist) validation (costTrends ++ [crossEntropyCostLs net validation]) rate (pred epochs) batchsize
+    where flatTrend dataList
+            | length dataList < 5 = False
+            | otherwise = ((dataList !! ((length dataList) - 5)) - (last dataList)) / 5.0 < 0.1   

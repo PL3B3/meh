@@ -102,6 +102,4 @@ repl a b (c:cs)
   | b == c = a ++ " " ++ repl a b cs
   | otherwise = c ++ " " ++ repl a b cs
 
-scramble :: [String]
-scramble = foldl (\x y -> if (elem x (reverse y)) x else x:y) [] (unique (zip list list))
-  where list = "abcdefghijk"
+

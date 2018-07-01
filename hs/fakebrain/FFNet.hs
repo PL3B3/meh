@@ -120,7 +120,7 @@ crossLs net pairlist r8 gens num
   | otherwise = crossLs (cross net (take num pairlist) r8) (drop num pairlist) r8 (pred gens) num
 
 --Generates a thiccboi, who predic data with HIGH accurate
-thiccboi :: Int -> Net -> [([Double],[Double])] -> Double -> Int -> Int -> IO ([Double])
+thiccboi :: Int -> Net -> Pairlist -> Double -> Int -> Int -> IO ([Double])
 thiccboi genr8r net samps rate gens num = do
   let dexes = take (num * gens) $ randomRs (0,(pred $ length samps)) (mkStdGen genr8r)
       boi = crossLs net (foldl (\a b -> a ++ [samps !! b]) [] dexes) rate gens num
@@ -148,7 +148,7 @@ averageNets :: [Net] -> Net
 averageNets nets = divideNetByScalar (sumNets nets) (fromIntegral $ length nets) 
 
 --If the SUCC game is FEEBLE and UNWORTHY, is a man not ENTITLED to PULLOUT?
-speedeePULLOUT :: Net -> [([Double],[Double])] -> [([Double],[Double])] -> [Double] -> Double -> Int -> Int -> Net
+speedeePULLOUT :: Net -> Pairlist -> Pairlist -> [Double] -> Double -> Int -> Int -> Net
 speedeePULLOUT net pairlist validation costTrends rate epochs batchsize
   | epochs == 0 || flatTrend costTrends = net
   | otherwise = speedeePULLOUT (cross net (take batchsize pairlist) rate) (drop batchsize pairlist) validation (costTrends ++ [crossEntropyCostLs net validation]) rate (pred epochs) batchsize

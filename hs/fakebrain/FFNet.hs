@@ -18,12 +18,12 @@ module FFNet
     crossProp,
     crossLs,
     cross,
-    thiccboi,    
+    absoluteUnit,    
     sumNets,
     addTwoNets,
     divideNetByScalar,
     averageNets,
-    speedeePULLOUT
+    cutoffOptimal
 ) where
 
 import MatrixMaths
@@ -119,9 +119,9 @@ crossLs net pairlist r8 gens num
   | gens == 0 = net
   | otherwise = crossLs (cross net (take num pairlist) r8) (drop num pairlist) r8 (pred gens) num
 
---Generates a thiccboi, who predic data with HIGH accurate
-thiccboi :: Int -> Net -> Pairlist -> Double -> Int -> Int -> IO ([Double])
-thiccboi genr8r net samps rate gens num = do
+--Generates a absoluteUnit, who predic data with HIGH accurate
+absoluteUnit :: Int -> Net -> Pairlist -> Double -> Int -> Int -> IO ([Double])
+absoluteUnit genr8r net samps rate gens num = do
   let dexes = take (num * gens) $ randomRs (0,(pred $ length samps)) (mkStdGen genr8r)
       boi = crossLs net (foldl (\a b -> a ++ [samps !! b]) [] dexes) rate gens num
   putStrLn $ show boi
@@ -147,11 +147,11 @@ divideNetByScalar (Net layers) num = Net (map (\l@(w, b, a) -> (scalarMult w num
 averageNets :: [Net] -> Net
 averageNets nets = divideNetByScalar (sumNets nets) (fromIntegral $ length nets) 
 
---If the SUCC game is FEEBLE and UNWORTHY, is a man not ENTITLED to PULLOUT?
-speedeePULLOUT :: Net -> Pairlist -> Pairlist -> [Double] -> Double -> Int -> Int -> Net
-speedeePULLOUT net pairlist validation costTrends rate epochs batchsize
+--If the neural network isn't improving much more, there's only a risk it's overfitting, so training should stop
+cutoffOptimal :: Net -> Pairlist -> Pairlist -> [Double] -> Double -> Int -> Int -> Net
+cutoffOptimal net pairlist validation costTrends rate epochs batchsize
   | epochs == 0 || flatTrend costTrends = net
-  | otherwise = speedeePULLOUT (cross net (take batchsize pairlist) rate) (drop batchsize pairlist) validation (costTrends ++ [crossEntropyCostLs net validation]) rate (pred epochs) batchsize
+  | otherwise = cutoffOptimal (cross net (take batchsize pairlist) rate) (drop batchsize pairlist) validation (costTrends ++ [crossEntropyCostLs net validation]) rate (pred epochs) batchsize
     where flatTrend dataList
             | length dataList < 5 = False
             | otherwise = ((dataList !! ((length dataList) - 5)) - (last dataList)) / 5.0 < 0.1   

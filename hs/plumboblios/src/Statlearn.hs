@@ -1,10 +1,10 @@
-module Statlearn (printboi) where 
+module Statlearn (printboi) where
 
 import StatBlob as SB
 import Data.List as L
 
 --Int is dimensions, from highest to lowest level
-data Hypercube = Hypercube [Int] [Float] deriving Show 
+data Hypercube = Hypercube [Int] [Float] deriving Show
 
 xpec = (\x -> sum x / (fromIntegral $ length x))
 
@@ -27,13 +27,13 @@ coord' :: [Int] -> Hypercube -> Float
 coord' coords (Hypercube lsint lsflt) = lsflt !! sum (foldl (\b a -> b ++ [(a * (div (length lsflt) (product $ take (succ $ length b) lsint)))]) [] coords)
 
 coord :: [Int] -> Hypercube -> [Float]
-coord coords (Hypercube lsint lsflt) = take (div (length lsflt) (product (take (length startposit) lsint))) (drop ((sum startposit) - 1) lsflt)  
+coord coords (Hypercube lsint lsflt) = take (div (length lsflt) (product (take (length startposit) lsint))) (drop ((sum startposit) - 1) lsflt)
         where startposit = (foldl (\b a -> b ++ [(a * (div (length lsflt) (product $ take (succ $ length b) lsint)))]) [] coords)
 
 
 
 --frame :: [Int] -> Hypercube -> [Float]
---frame coords (Hypercube lsint lsflt) =              
+--frame coords (Hypercube lsint lsflt) =
 
 mse :: [Float] -> [[Float]] -> ([Float] -> Float) -> Float
 mse y x fhat = (1 / (fromIntegral (length y))) * (sum $ zipWith (\x y -> (x - y)^2) y (map fhat x))
@@ -41,7 +41,7 @@ mse y x fhat = (1 / (fromIntegral (length y))) * (sum $ zipWith (\x y -> (x - y)
 --basic k nearest neighbors algorithm
 knn :: [(Float, Float, Int)] -> (Float, Float) -> Int -> Int
 knn trlst (a2, b2) nbors = mostcommon $ map snd (filter (\a -> L.elem (fst a) lowestnbors) distvalpairs)
-    where lowestnbors = take nbors $ sort $ map fst distvalpairs  
+    where lowestnbors = take nbors $ sort $ map fst distvalpairs
           distvalpairs = map (\x@(a, b, c) -> ((sqrt $ (a2 - a)^2 + (b2 - b)^2), c)) trlst
 
 --like knn but works for any number of dimensions (hopefully)
@@ -49,7 +49,7 @@ knn' :: [([Float], Int)] -> [Float] -> Int -> Int
 knn' pntlst pnt nbr = mostcommon $ map snd (filter (\a -> L.elem (fst a) lowestnbrs) distvalpairs)
     where lowestnbrs = take nbr $ sort $ map fst distvalpairs
           distvalpairs = map (\x@(a,b) -> ((sqrt $ sum $ map (^2) (zipWith (-) a pnt)), b)) pntlst
-            
+
 
 
 mostcommon (x:xs)
@@ -65,13 +65,13 @@ maxls (x:xs)
 rsqr :: [Float] -> [Float] -> (Float -> Float) -> Float
 rsqr yls xls fun = 1.0 - (rss / tss)
     where rss = sum $ zipWith (\y x -> (y - (fun x))^2) yls xls
-          tss = sum [(y - (xpec yls)) ^ 2 | y <- yls] 
+          tss = sum [(y - (xpec yls)) ^ 2 | y <- yls]
 
 rsqr' :: [(Float, Float)] -> (Float -> Float) -> Float
 rsqr' ptls fun = 1.0 - (rss / tss)
     where rss = sum $ map (\g@(x,y) -> (y - (fun x))^2) ptls
           tss = sum [(y - yxpec) ^ 2 | y <- (map snd ptls)]
-          yxpec = xpec $ map snd ptls 
+          yxpec = xpec $ map snd ptls
 
 
 linreg1var :: [(Float, Float)] -> (Float -> Float)
@@ -88,7 +88,7 @@ logreg int slp x = logterm / (logterm + 1.0)
           n = 100
 
 lindisc :: [([Float], Int)] -> Float -> Int -> Float
-lindisc pool x y = prior * xcondy / probx 
+lindisc pool x y = prior * xcondy / probx
     where ylst = filter (\x@(ls, rslt) -> rslt == y) pool
           floatlen = fromIntegral $ length
           prior = (floatlen ylst) / (floatlen pool)

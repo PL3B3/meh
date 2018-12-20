@@ -1,6 +1,6 @@
 module LinearAlgebra (
+makeTensor,
 Tensor,
-shapeOf,
 switchDimensions,
 toIndex,
 toCoordinate

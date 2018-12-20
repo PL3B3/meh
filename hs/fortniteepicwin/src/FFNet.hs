@@ -155,3 +155,7 @@ cutoffOptimal net pairlist validation costTrends rate epochs batchsize
     where flatTrend dataList
             | length dataList < 5 = False
             | otherwise = ((dataList !! ((length dataList) - 5)) - (last dataList)) / 5.0 < 0.1   
+
+euler :: Double -> Double -> Double -> (Double -> Double -> Double) -> Int -> Double
+euler start origin target deriv iterations = head $ foldl (\a b -> [(a !! 0) + (deriv (a !! 0) (origin + (fromIntegral $ b) * tick)) * tick]) [start] (pp [iterations])
+    where tick = (target - origin) / (fromIntegral iterations)

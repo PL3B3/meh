@@ -65,6 +65,10 @@ ab = take 2 $ repeat (\a -> log a)
 feed :: (Num a) => Tensor a -> Tensor a -> Tensor a -> Tensor a 
 feed input weight bias = ta (mm input (sd weight [1,0])) bias
 
+--takes gradient of layer k+1 pure outputs, outputs []
+back :: (Num a) => Tensor a -> Tensor a -> 
+
+
 feed2 :: (Num a) => Tensor a -> Tensor a -> (a -> a) -> (Tensor a -> Tensor a)
 feed2 w b a = (\i -> fmap a $ ta b $ mm (sd w [1,0]) i)
 
@@ -80,7 +84,7 @@ feedSigmoid w b = feed2 w b (\a -> exp a / (exp a + 1.0)
 --feedControl layer@((acti, flavor), datum) input = case flavor of Feed -> fmap acti $ feed input (datum !! 0) (datum !! 1) acti
                                                                  Recur -> fmap acti $ feedRecurrent datum
 							         Convol -> fmap acti $ feedConvolution datum
-								 
+
 
 --feedConvolution
 

@@ -1,12 +1,14 @@
 module LinearAlgebra (
-switchDimensions,
 bob,
 iri,
-Tensor,
+Tensor(Tensor),
 makeTensor,
 shapeOf,
 infoOf,
 splitInto,
+get_row,
+get_column,
+mtranspose,
 vm,
 pp,
 sd,
@@ -23,7 +25,7 @@ toCoordinate
 import Debug.Trace
 import Data.List
 
-data Tensor a = Tensor [Int] [a] deriving Show
+data Tensor a = Tensor [Int] [a] deriving (Show, Eq)
 
 instance Functor Tensor where
     fmap function tensor@(Tensor shape info) = Tensor shape (map function info)
@@ -66,6 +68,9 @@ vm v1 v2 = sum $ zipWith (*) v1 v2
 pp :: [Int] -> [Int]
 pp l = [0..(pred $ product l)]
 
+pl :: [a] -> [Int]
+pl l = [0..(pred $ length l)]
+
 sd :: Tensor a -> [Int] -> Tensor a
 sd t@(Tensor shape info) fd = Tensor newShape (map (\a -> valueAt t $ (flip $ toCoordinate a newShape)) (pp shape))
     where newShape = flip shape
@@ -83,6 +88,14 @@ toCoordinate index dimensions
     | length dimensions == 0 = []
     | otherwise = [div index dTail] ++ toCoordinate (mod index dTail) (tail dimensions)
         where dTail = product $ tail dimensions
+
+--apply to matrices only
+get_row :: Tensor a -> Int -> Tensor a
+get_row t@(Tensor shape info) index = Tensor [1,(shape !! 1)] ((splitInto info (shape !! 1)) !! index)
+
+get_column tensor index = mtranspose (get_row (mtranspose tensor) index)
+
+mtranspose tensor = sd tensor [1,0]
 
 --simple 2d matrix multiplication. I split the first matrix into its rows, and the second into its columns, and multiple
 mm :: (Num a) => Tensor a -> Tensor a -> Tensor a

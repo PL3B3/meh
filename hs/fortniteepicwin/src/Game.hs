@@ -21,18 +21,19 @@ game :: [Player] -> L.Tensor Double -> Int -> ([Player], L.Tensor Double)
 game preteenbattleroyalecannonfodder gameboard turns = if turns == 1 then next_turn preteenbattleroyalecannonfodder gameboard else game (fst nextgen) (snd nextgen) (pred turns)
   where nextgen = next_turn preteenbattleroyalecannonfodder gameboard
 
-game2 p g t = foldl (\a@(bu,zu) b -> next_turn bu zu) (p, g) [1..t]
+game2 :: ([Player], L.Tensor Double) -> Int -> ([Player], L.Tensor Double) 
+game2 i t = foldl (\a b -> newturn a) i [1..t]
 
 --cols = players, rows = turns
---corrected player referencing
+--corrected player referencing (because each player has (num players - 1) decisions, and I have to evaluate each player's decision relative to the others' to ascertain payoffs, I need to make sure the player's decision towards player b, and player b's decision towards our player are aligned)
 newturn :: ([Player], L.Tensor Double) -> ([Player], L.Tensor Double)
 newturn prev@(p,g@(L.Tensor s i)) = (nps, ngb)
-  where nps = 
-        ngb = L.makeTensor [s !! 0 + 1, s !! 1] (i ++ dcs)
-        cnt = length p
-        dcs = foldl (\a b -> a ++ [b (L.get_row gameboard (pred $ s !! 0))]) [] (map fst players)
-        dci = map (map round_sigmoid) decision_list
-
+  where nps = foldl (\c d -> c ++ [(fst (p !! d), (snd (p !! d)) + (sum $ zipWith (score) (dci !! d) (aln d))) :: Player]) [] cn1
+        ngb = L.makeTensor [succ $ s !! 0, s !! 1] (i ++ (concat dcs))
+        (cn1, cn2) = ([0..(pred $ length p)], [0..(pred $ pred $ length p)])
+        dcs = foldl (\a b -> a ++ [b (L.get_row g (pred $ s !! 0))]) [] (map fst p)
+        dci = map (map round_sigmoid) dcs
+        aln d = foldl (\e f -> e ++ [if (f < d) then ((except d dci) !! f) !! (d - 1) else ((except d dci) !! f) !! d]) [] cn2
 
 next_turn :: [Player] -> L.Tensor Double -> ([Player], L.Tensor Double)
 next_turn players gameboard@(L.Tensor shape info) = (new_players, new_gameboard)

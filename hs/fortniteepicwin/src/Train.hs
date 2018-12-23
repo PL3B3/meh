@@ -7,6 +7,7 @@ import Game
 import Nets
 import System.Random
 import Debug.Trace
+import Stats
 
 --type Network = [(Tensor Double, Tensor Double)]
 type Layer = [[Tensor Double]]
@@ -36,10 +37,15 @@ grab_stats znets = (foldl (\a b -> a ++ [centTrue $ map b (cnets !! 0)]) [] [tft
 tft0 net = if (net_stat) net (map (\a@(b,c) -> (makeTensor [1,2] b, makeTensor [1,1] c)) [([0.0,0.0],[0.0]), ([1.0,0.0],[0.0]), ([0.0,1.0],[1.0]), ([1.0,1.0],[1.0])]) == 0 then True else False
 tft1 net = if (net_stat) net (map (\a@(b,c) -> (makeTensor [1,2] b, makeTensor [1,1] c)) [([0.0,0.0],[0.0]), ([1.0,0.0],[1.0]), ([0.0,1.0],[0.0]), ([1.0,1.0],[1.0])]) == 0 then True else False
 aggro0 net = if (net_stat) net (map (\a@(b,c) -> (makeTensor [1,2] b, makeTensor [1,1] c)) [([0.0,0.0],[1.0]), ([1.0,0.0],[1.0]), ([0.0,1.0],[1.0]), ([1.0,1.0],[1.0])]) == 0 then True else False
-aggro1 net = if (net_stat) net (map (\a@(b,c) -> (makeTensor [1,2] b, makeTensor [1,1] c)) [([0.0,1.0],[0.0]), ([1.0,0.0],[1.0]), ([0.0,1.0],[1.0]), ([1.0,1.0],[1.0])]) == 0 then True else False
+aggro1 net = if (net_stat) net (map (\a@(b,c) -> (makeTensor [1,2] b, makeTensor [1,1] c)) [([0.0,1.0],[1.0]), ([1.0,0.0],[1.0]), ([0.0,1.0],[1.0]), ([1.0,1.0],[1.0])]) == 0 then True else False
 peaceful0 net = if (net_stat) net (map (\a@(b,c) -> (makeTensor [1,2] b, makeTensor [1,1] c)) [([0.0,0.0],[0.0]), ([1.0,0.0],[0.0]), ([0.0,1.0],[0.0]), ([1.0,1.0],[0.0])]) == 0 then True else False
 peaceful1 net = if (net_stat) net (map (\a@(b,c) -> (makeTensor [1,2] b, makeTensor [1,1] c)) [([0.0,0.0],[0.0]), ([1.0,0.0],[0.0]), ([0.0,1.0],[0.0]), ([1.0,1.0],[0.0])]) == 0 then True else False
 
+
+
+gameswithtft g = avg [tft0s, tft1s]
+  where tft0s = centTrue $ map (\a -> centTrue (map tft0 a)  > 0.0) $ map (\z -> ((categ z 2) !! 0)) g
+        tft1s = centTrue $ map (\a -> centTrue (map tft1 a)  > 0.0) $ map (\z -> ((categ z 2) !! 1)) g
 
 webbi :: [[[Tensor Double]]]
 webbi = [[[numtensor 4.1 [30, 10], numtensor 4.1 [1, 10]]], [[numtensor 4.1 [10, 5], numtensor 4.1 [1, 5]]]]
@@ -177,8 +183,8 @@ darwin3 nets rands rand num_per_game turns = out
         net_score_categs = categ all_net_score_pairs num_per_game
         --still in category form. the proto eugenes are
         proto_eugenes = map (\i -> map fst $ concat $ rpt (div num_per_categ num_per_game) $ take num_per_game $ quickSort i) net_score_categs
-        -- proto_eugenes = map (\i -> map fst $ concat $ rpt (div num_per_categ num_per_game) $ (take (num_per_game - 1) $ quick_sort_r i) ++ (take 1 (quickSort i))) net_score_categs
-        -- proto_eugenes = map (\i -> map fst $ concat $ rpt num_per_game $ take (div num_per_categ num_per_game) $ quick_sort_r i) net_score_categs
+        --proto_eugenes = map (\i -> map fst $ concat $ rpt (div num_per_categ num_per_game) $ (take (num_per_game - 1) $ quick_sort_r i) ++ (take 1 (quickSort i))) net_score_categs
+        --proto_eugenes = map (\i -> map fst $ concat $ rpt num_per_game $ take (div num_per_categ num_per_game) $ quick_sort_r i) net_score_categs
         eugenes = concat $ seg_categ proto_eugenes num_per_categ
         --trace ("eugenes: " ++ show eugenes ++ "\n")$
         out = mutate eugenes rands

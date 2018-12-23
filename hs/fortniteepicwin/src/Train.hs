@@ -27,6 +27,20 @@ evolve nets rands topnum fitness = (zipWith addNets eugenes rands)
        where eugenes = map fst $ take topnum $ quickSort (map (\i -> (i, fitness i)) nets)
              netsize = length $ nets !! 0
 
+tis = map (\a -> makeTensor [1,2] a) [[0.0,0.0],[1.0,0.0],[1.0,1.0],[0.0,1.0]]
+
+--get summary stats from a ziegler
+grab_stats znets = (foldl (\a b -> a ++ [centTrue $ map b (cnets !! 0)]) [] [tft0, aggro0, peaceful0], foldl (\a b -> a ++ [centTrue $ map b (cnets !! 1)]) [] [tft1, aggro1, peaceful1])
+  where cnets = (categ (concat znets) 2)
+
+tft0 net = if (net_stat) net (map (\a@(b,c) -> (makeTensor [1,2] b, makeTensor [1,1] c)) [([0.0,0.0],[0.0]), ([1.0,0.0],[0.0]), ([0.0,1.0],[1.0]), ([1.0,1.0],[1.0])]) == 0 then True else False
+tft1 net = if (net_stat) net (map (\a@(b,c) -> (makeTensor [1,2] b, makeTensor [1,1] c)) [([0.0,0.0],[0.0]), ([1.0,0.0],[1.0]), ([0.0,1.0],[0.0]), ([1.0,1.0],[1.0])]) == 0 then True else False
+aggro0 net = if (net_stat) net (map (\a@(b,c) -> (makeTensor [1,2] b, makeTensor [1,1] c)) [([0.0,0.0],[1.0]), ([1.0,0.0],[1.0]), ([0.0,1.0],[1.0]), ([1.0,1.0],[1.0])]) == 0 then True else False
+aggro1 net = if (net_stat) net (map (\a@(b,c) -> (makeTensor [1,2] b, makeTensor [1,1] c)) [([0.0,1.0],[0.0]), ([1.0,0.0],[1.0]), ([0.0,1.0],[1.0]), ([1.0,1.0],[1.0])]) == 0 then True else False
+peaceful0 net = if (net_stat) net (map (\a@(b,c) -> (makeTensor [1,2] b, makeTensor [1,1] c)) [([0.0,0.0],[0.0]), ([1.0,0.0],[0.0]), ([0.0,1.0],[0.0]), ([1.0,1.0],[0.0])]) == 0 then True else False
+peaceful1 net = if (net_stat) net (map (\a@(b,c) -> (makeTensor [1,2] b, makeTensor [1,1] c)) [([0.0,0.0],[0.0]), ([1.0,0.0],[0.0]), ([0.0,1.0],[0.0]), ([1.0,1.0],[0.0])]) == 0 then True else False
+
+
 webbi :: [[[Tensor Double]]]
 webbi = [[[numtensor 4.1 [30, 10], numtensor 4.1 [1, 10]]], [[numtensor 4.1 [10, 5], numtensor 4.1 [1, 5]]]]
 zebbi :: [[[Tensor Double]]]
@@ -34,13 +48,14 @@ zebbi = [[[numtensor 1.2 [30, 10], numtensor 1.2 [1, 10]]], [[numtensor 1.2 [10,
 
 --utilities
 
-net_stat :: [[[Tensor Double]]] -> [(Tensor Double), (Tensor Double)] -> Double
-net_stat net expecteds =
-  where 
-
 test_nets :: [[[[Tensor Double]]]] -> Int -> Int -> [[Int]]
 test_nets nets pnum turns = map (\a -> map (\b -> snd b) $ fst a) results
   where results = play_games (splitInto nets pnum) turns
+
+net_stat :: [[[Tensor Double]]] -> [(Tensor Double, Tensor Double)] -> Double
+net_stat net expecteds = sum $ map (\xpek@(input, out) -> cost (fmap (\a -> fromIntegral $ round_sigmoid a) (feed net input)) out) expecteds
+  where cost real xpecs = sum $ zipWith (\a b -> 0.5 * (a - b) ^ 2) (infoOf real) (infoOf xpecs)
+
 
 get_boards :: [[[[Tensor Double]]]] -> Int -> Int -> [Tensor Int]
 get_boards nets pnum turns = map (\a -> fmap round_sigmoid a) $ map (snd) results
@@ -103,6 +118,10 @@ quickSort a
     where x = head a
           xs = tail a
 
+fln = fromIntegral . length
+
+centTrue ls = (fln $ filter id ls) / (fln ls)
+
 
 totaldim :: [[[[Int]]]] -> Int
 totaldim dims = sum $ concat $ concat $ concat (netMap product [dims])
@@ -129,18 +148,40 @@ sigStepMake dims nums = tail $ foldl (\a b -> [[fromIntegral $ (newhead a) + pro
   where newhead = floor . head . head
 
 
+-- darwin3 :: [[[[Tensor Double]]]] -> [Double] -> Int -> Int -> Int -> [[[[Tensor Double]]]]
+-- darwin3 nets rands rand num_per_game turns = out
+--   where categs = categ nets num_per_game
+--         shifted_categs = foldl (\e f -> e ++ [shift_list (categs !! f) (f * rand)]) [] (pl categs)
+--         games_players_list = seg_categ shifted_categs num_per_categ
+--         results = play_games games_players_list turns
+--         all_net_score_pairs = concat $ map fst results
+--         --these are the categorized net-score pairs for each playerspot category
+--         -- trace ("net score pairs: " ++ show all_net_score_pairs ++ "\n") $
+--         net_score_categs = categ all_net_score_pairs num_per_game
+--         --still in category form. the proto eugenes are
+--         proto_eugenes = map (\i -> map fst $ concat $ rpt (div num_per_categ num_per_game) $ take num_per_game $ quick_sort_r i) net_score_categs
+--         eugenes = concat $ seg_categ proto_eugenes num_per_categ
+--         --trace ("eugenes: " ++ show eugenes ++ "\n")$
+--         out = mutate eugenes rands
+--         num_per_categ = div (length nets) num_per_game
+
 darwin3 :: [[[[Tensor Double]]]] -> [Double] -> Int -> Int -> Int -> [[[[Tensor Double]]]]
 darwin3 nets rands rand num_per_game turns = out
   where categs = categ nets num_per_game
-        games_players_list = seg_categ categs num_per_categ
+        shifted_categs = foldl (\e f -> e ++ [shift_list (categs !! f) (f * rand)]) [] (pl categs)
+        games_players_list = seg_categ shifted_categs num_per_categ
         results = play_games games_players_list turns
         all_net_score_pairs = concat $ map fst results
         --these are the categorized net-score pairs for each playerspot category
-        net_score_categs = trace ("net score pairs: " ++ show all_net_score_pairs ++ "\n") $ categ all_net_score_pairs num_per_game
+        -- trace ("net score pairs: " ++ show all_net_score_pairs ++ "\n") $
+        net_score_categs = categ all_net_score_pairs num_per_game
         --still in category form. the proto eugenes are
-        proto_eugenes = map (\i -> map fst $ concat $ rpt (div num_per_categ num_per_game) $ take num_per_game $ quick_sort_r i) net_score_categs
+        proto_eugenes = map (\i -> map fst $ concat $ rpt (div num_per_categ num_per_game) $ take num_per_game $ quickSort i) net_score_categs
+        -- proto_eugenes = map (\i -> map fst $ concat $ rpt (div num_per_categ num_per_game) $ (take (num_per_game - 1) $ quick_sort_r i) ++ (take 1 (quickSort i))) net_score_categs
+        -- proto_eugenes = map (\i -> map fst $ concat $ rpt num_per_game $ take (div num_per_categ num_per_game) $ quick_sort_r i) net_score_categs
         eugenes = concat $ seg_categ proto_eugenes num_per_categ
-        out = trace ("eugenes: " ++ show eugenes ++ "\n")$ mutate eugenes rands
+        --trace ("eugenes: " ++ show eugenes ++ "\n")$
+        out = mutate eugenes rands
         num_per_categ = div (length nets) num_per_game
 
 --spawns randomized nets yet again but doesn't bother segmenting the games
@@ -170,6 +211,18 @@ immaculate_victory dims pnum turns cyc = do
   alpha <- immaculate_conception dims
   zeta <- victory_royale alpha pnum turns cyc
   return zeta
+
+ziegle :: [[[[[Int]]]]] -> Int -> Int -> Int -> Int -> IO ([[[[[Tensor Double]]]]])
+ziegle dims pnum turns cyc metacyc
+  | metacyc == 1 = do
+      alpha <- immaculate_conception dims
+      zeta  <- victory_royale alpha pnum turns cyc
+      return [zeta]
+  | otherwise = do
+      alpha <- immaculate_conception dims
+      zeta  <- victory_royale alpha pnum turns cyc
+      next <- ziegle dims pnum turns cyc (pred metacyc)
+      return ([zeta] ++ next)
 
 mutate :: [[[[Tensor Double]]]] -> [Double] -> [[[[Tensor Double]]]]
 mutate nets nums = zipWith (addNets) nets (gen_nets (map getDims nets) nums)
@@ -233,6 +286,7 @@ getboard a = fmap (round_sigmoid) $ snd a
 scores a = map snd $ fst a
 
 --best game ever
+--modded ngb to round the outputs. map (\a -> fromIntegral $ round_sigmoid a) $
 newturn3 :: ([([[[Tensor Double]]], Int)], Tensor Double) -> ([([[[Tensor Double]]], Int)], Tensor Double)
 newturn3 prev@(p,g@(Tensor s i)) = (nps, ngb)
   where nps = foldl (\c d -> c ++ [(fst (p !! d), (snd (p !! d)) + (sum $ zipWith (score) (dci !! d) (aln d)))]) [] cn1

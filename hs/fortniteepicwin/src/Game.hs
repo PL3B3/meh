@@ -21,7 +21,7 @@ game :: [Player] -> L.Tensor Double -> Int -> ([Player], L.Tensor Double)
 game preteenbattleroyalecannonfodder gameboard turns = if turns == 1 then next_turn preteenbattleroyalecannonfodder gameboard else game (fst nextgen) (snd nextgen) (pred turns)
   where nextgen = next_turn preteenbattleroyalecannonfodder gameboard
 
-game2 :: ([Player], L.Tensor Double) -> Int -> ([Player], L.Tensor Double) 
+game2 :: ([Player], L.Tensor Double) -> Int -> ([Player], L.Tensor Double)
 game2 i t = foldl (\a b -> newturn a) i [1..t]
 
 --cols = players, rows = turns
@@ -57,5 +57,5 @@ round_sigmoid dub = fromEnum (dub > 0.5)
 
 score :: Int -> Int -> Int
 score ourdecision theirdecision
-  | ourdecision == 0 = if theirdecision == 0 then 4 else -4
-  | otherwise = if theirdecision == 0 then 10 else 0
+  | ourdecision == 0 = if theirdecision == 0 then 6 else 1
+  | otherwise = if theirdecision == 0 then 10 else 3

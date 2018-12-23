@@ -11,6 +11,7 @@ get_column,
 mtranspose,
 vm,
 pp,
+pl,
 sd,
 mm,
 te,
@@ -56,14 +57,14 @@ shapeOf (Tensor shape info) = shape
 infoOf :: Tensor a -> [a]
 infoOf (Tensor shape info) = info
 
---splits Into chunks of size "size" 
+--splits Into chunks of size "size"
 splitInto :: [a] -> Int -> [[a]]
 splitInto list size
-    | length list == 0 = []  
+    | length list == 0 = []
     | otherwise = [take size list] ++ splitInto (drop size list) size
 
 vm :: (Num a) => [a] -> [a] -> a
-vm v1 v2 = sum $ zipWith (*) v1 v2 
+vm v1 v2 = sum $ zipWith (*) v1 v2
 
 pp :: [Int] -> [Int]
 pp l = [0..(pred $ product l)]
@@ -83,7 +84,7 @@ toIndex :: [Int] -> [Int] -> Int
 toIndex coordinate dimensions = vm coordinate sizes
     where sizes = (map (\a -> product $ drop a dimensions) [1..(pred $ length dimensions)]) ++ [1]
 
-toCoordinate :: Int -> [Int] -> [Int]  
+toCoordinate :: Int -> [Int] -> [Int]
 toCoordinate index dimensions
     | length dimensions == 0 = []
     | otherwise = [div index dTail] ++ toCoordinate (mod index dTail) (tail dimensions)

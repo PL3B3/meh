@@ -1,3 +1,363 @@
+
+
+--take you down to de pain train station in train town (sobbing)
+
+import LinearAlgebra
+import Game
+import Nets
+import System.Random
+import Debug.Trace
+
+--type Network = [(Tensor Double, Tensor Double)]
+type Layer = [[Tensor Double]]
+
+--default SIGMOID feedforthwards
+feed :: [[[Tensor Double]]] -> Tensor Double -> Tensor Double
+feed net input = last $ foldl (\list elem@[weight:bias:[]] -> list ++ [fmap (\a -> 1 / (1 + exp a)) $ ta (bias) (mm (last list) weight)]) [input] net
+
+zerotensor shape = makeTensor shape (take (product shape) $ repeat 0)
+numtensor num shape = makeTensor shape (take (product shape) $ repeat num)
+
+--takes networks, scores them by fitness, then takes the "topnum" and varies / crossbreeds them to create new generation
+--evolve :: [Network] -> [Network] -> Int -> (Network -> Double) -> [Network]
+evolve :: [[[[Tensor Double]]]] -> [[[[Tensor Double]]]] -> Int -> ([[[Tensor Double]]] -> Int) -> [[[[Tensor Double]]]]
+evolve nets rands topnum fitness = (zipWith addNets eugenes rands)
+-- ++ [netMap (\a -> a / (fromIntegral topnum)) (foldl (addNets) (head eugenes) (tail eugenes))]
+-- ++ [foldl (\a b -> a ++ [(eugenes !! b) !! b]) [] [0..(pred netsize)]]
+       where eugenes = map fst $ take topnum $ quickSort (map (\i -> (i, fitness i)) nets)
+             netsize = length $ nets !! 0
+
+webbi :: [[[Tensor Double]]]
+webbi = [[[numtensor 4.1 [30, 10], numtensor 4.1 [1, 10]]], [[numtensor 4.1 [10, 5], numtensor 4.1 [1, 5]]]]
+zebbi :: [[[Tensor Double]]]
+zebbi = [[[numtensor 1.2 [30, 10], numtensor 1.2 [1, 10]]], [[numtensor 1.2 [10, 5], numtensor 1.2 [1, 5]]]]
+
+--utilities
+
+net_stat :: [[[Tensor Double]]] -> [(Tensor Double), (Tensor Double)] -> Double
+net_stat net expecteds =
+  where 
+
+test_nets :: [[[[Tensor Double]]]] -> Int -> Int -> [[Int]]
+test_nets nets pnum turns = map (\a -> map (\b -> snd b) $ fst a) results
+  where results = play_games (splitInto nets pnum) turns
+
+get_boards :: [[[[Tensor Double]]]] -> Int -> Int -> [Tensor Int]
+get_boards nets pnum turns = map (\a -> fmap round_sigmoid a) $ map (snd) results
+  where results = play_games (splitInto nets pnum) turns
+
+
+addNets :: [[[Tensor Double]]] -> [[[Tensor Double]]] -> [[[Tensor Double]]]
+addNets n1 n2 = zipWith (zipWith (zipWith (ta))) n1 n2
+
+categ :: [a] -> Int -> [[a]]
+categ list num_categs = foldl (\a b -> map (\c -> (a !! c) ++ [b !! c]) (ps num_categs)) (take (num_categs) $ repeat []) (splitInto list num_categs)
+
+decateg :: [[a]] -> Int -> [a]
+decateg list num_per_categ = concat $ foldl (\cume categ_dex -> cume ++ [map (!! categ_dex) list]) [] [0..(pred $ num_per_categ)]
+
+displacement :: [[[[Tensor Double]]]] -> Int
+displacement ls = sum $ map totaldim $ map getDims ls
+
+seg_categ :: [[a]] -> Int -> [[a]]
+seg_categ list num_per_categ = concat $ foldl (\cume categ_dex -> cume ++ [[map (!! categ_dex) list]]) [] [0..(pred $ num_per_categ)]
+
+appendNets :: [[[Tensor Double]]] -> [[[Tensor Double]]] -> [[[Tensor Double]]]
+appendNets n1 n2 = zipWith (zipWith (++)) n1 n2
+
+appendNetsUp :: [[[Tensor Double]]] -> [[[Tensor Double]]] -> [[[Tensor Double]]]
+appendNetsUp n1 n2 = zipWith (++) n1 n2
+
+divideto :: [a] -> Int -> [[a]]
+divideto l n = splitInto l (div (length l) n)
+
+shift_list :: [a] -> Int -> [a]
+shift_list list shift = post ++ prev
+  where (prev, post) = splitAt (l - (mod shift l)) list
+        l = length list
+
+netMap :: (Functor f) => (a -> b) -> [[[f a]]] -> [[[f b]]]
+netMap fun net = map (map (map (fmap fun))) net
+
+getDims :: [[[Tensor Double]]] -> [[[[Int]]]]
+getDims tensors = map (map (map shapeOf)) tensors
+
+fragment :: [Int] -> [a] -> [[a]]
+fragment seglengths list
+  | seglengths == [] = []
+  | otherwise = [take (head seglengths) list] ++ fragment (tail seglengths) (drop (head seglengths) list)
+
+netToPlayer :: [[[Tensor Double]]] -> Player
+netToPlayer wbs = ((\ins -> infoOf $ feed wbs ins), 0) :: Player
+
+--hi to lo
+quick_sort_r :: [([[[Tensor Double]]], Int)] -> [([[[Tensor Double]]], Int)]
+quick_sort_r a = reverse $ quickSort a
+
+--sort the nets. yay! (lo to hi)
+quickSort :: [([[[Tensor Double]]], Int)] -> [([[[Tensor Double]]], Int)]
+quickSort a
+  | a == [] = []
+  | xs == [] = [x]
+  | otherwise = quickSort (filter (\p -> snd p < snd x) a) ++ (filter (\p -> snd p == snd x) a) ++ quickSort (filter (\p -> snd x < snd p) a)
+    where x = head a
+          xs = tail a
+
+
+totaldim :: [[[[Int]]]] -> Int
+totaldim dims = sum $ concat $ concat $ concat (netMap product [dims])
+
+tdimup :: [[[[Int]]]] -> [Int]
+tdimup dims = concat $ concat $ concat (netMap product [dims])
+
+zipNets :: (a -> b -> c) -> [[[a]]] -> [[[b]]] -> [[[c]]]
+zipNets f n1 n2 = zipWith (zipWith (zipWith (f))) n1 n2
+
+--takes dims, a list of nums, and makes a net of doubles shaped like dims
+sigNetMake :: [[[[Int]]]] -> [Double] -> [[[[Double]]]]
+sigNetMake dims nums = tail $ foldl (\a b -> [[[[fromIntegral $ (newhead a) + (newprod b)]]]] ++ (tail a) ++ [sigLayerMake b (take (newprod b) (drop (newhead a) nums))]) [[[[0.0]]]] dims
+  where newprod a = sum $ concat $ map (map product) a
+        newhead = floor . head . head . head . head
+
+sigLayerMake :: [[[Int]]] -> [Double] -> [[[Double]]]
+sigLayerMake dims nums = tail $ foldl (\a b -> [[[fromIntegral $ (newhead a) + (newprod b)]]] ++ (tail a) ++ [sigStepMake b (take (newprod b) (drop (newhead a) nums))]) [[[0.0]]] dims
+  where newprod a = sum $ map product a
+        newhead = floor . head . head . head
+
+sigStepMake :: [[Int]] -> [Double] -> [[Double]]
+sigStepMake dims nums = tail $ foldl (\a b -> [[fromIntegral $ (newhead a) + product b]] ++ (tail a) ++ [take (product b) (drop (newhead a) nums)]) [[0.0]] dims
+  where newhead = floor . head . head
+
+
+darwin3 :: [[[[Tensor Double]]]] -> [Double] -> Int -> Int -> Int -> [[[[Tensor Double]]]]
+darwin3 nets rands rand num_per_game turns = out
+  where categs = categ nets num_per_game
+        games_players_list = seg_categ categs num_per_categ
+        results = play_games games_players_list turns
+        all_net_score_pairs = concat $ map fst results
+        --these are the categorized net-score pairs for each playerspot category
+        net_score_categs = trace ("net score pairs: " ++ show all_net_score_pairs ++ "\n") $ categ all_net_score_pairs num_per_game
+        --still in category form. the proto eugenes are
+        proto_eugenes = map (\i -> map fst $ concat $ rpt (div num_per_categ num_per_game) $ take num_per_game $ quick_sort_r i) net_score_categs
+        eugenes = concat $ seg_categ proto_eugenes num_per_categ
+        out = trace ("eugenes: " ++ show eugenes ++ "\n")$ mutate eugenes rands
+        num_per_categ = div (length nets) num_per_game
+
+--spawns randomized nets yet again but doesn't bother segmenting the games
+immaculate_conception :: [[[[[Int]]]]] -> IO ([[[[Tensor Double]]]])
+immaculate_conception dims = do
+  gen <- newStdGen
+  let rands1 = randomRs (-3.0, 3.0) gen
+  let nets = gen_nets dims rands1
+  return nets
+
+--cycler for evolution. essentially an epochs machine
+victory_royale :: [[[[Tensor Double]]]] -> Int -> Int -> Int -> IO ([[[[Tensor Double]]]])
+victory_royale nets pnum turns cyc
+  | cyc == 0 = do
+      return nets
+  | otherwise = do
+      gen <- newStdGen
+      let rands = randomRs (-0.5, 0.5) gen
+      let rand = fst $ randomR (1, div (length nets) pnum) gen
+      let new_nets = darwin3 nets rands rand pnum turns
+      geta <- victory_royale new_nets pnum turns (pred cyc)
+      return geta
+
+--combines creator and cycler
+immaculate_victory :: [[[[[Int]]]]] -> Int -> Int -> Int -> IO ([[[[Tensor Double]]]])
+immaculate_victory dims pnum turns cyc = do
+  alpha <- immaculate_conception dims
+  zeta <- victory_royale alpha pnum turns cyc
+  return zeta
+
+mutate :: [[[[Tensor Double]]]] -> [Double] -> [[[[Tensor Double]]]]
+mutate nets nums = zipWith (addNets) nets (gen_nets (map getDims nets) nums)
+
+--the param "list_game_players" is a list of "lobbies" i.e. the group of nets playing one game
+play_games :: [[[[[Tensor Double]]]]] -> Int -> [([([[[Tensor Double]]], Int)], Tensor Double)]
+play_games list_game_players t = map (\a -> game3 (players_to_game a) t) list_game_players
+
+players_to_game :: [[[[Tensor Double]]]] -> ([([[[Tensor Double]]], Int)], Tensor Double)
+players_to_game nets = (map (\a -> (a, 0) :: ([[[Tensor Double]]], Int)) nets, numtensor 0.0 [1,(length nets) * (pred $ length nets)])
+
+--spawns randomized nets
+spawn_roydens :: [[[[[Int]]]]] -> Int -> IO ([[[[Tensor Double]]]])
+spawn_roydens dims num_per_game = do
+  gen <- newStdGen
+  let rands1 = randomRs (-3.0, 3.0) gen
+  let nets = foldl (\b a -> b ++ (gen_nets_2 a rands1 (displacement b))) [] minigames
+  return nets
+    where minigames = splitInto dims num_per_game
+
+--epoch_roydens :: [[[[Tensor Double]]]] -> Int -> Int -> Int -> IO ([[[[Tensor Double]]]])
+--epoch_roydens nets pnum turns cyc
+  -- | cyc == 0 = do
+  --     return nets
+  -- | otherwise = do
+  --     gen <- newStdGen
+  --     let rands2 = randomRs (-0.1, 0.1) gen
+  --     let gs = manygames gameinit turns
+  --     let e = darwin2 (concat $ map fst gs) (foldl (\f g -> f ++ (gen_nets_2 g rands2 (displacement f))) [] minigames) (div (length nets) pnum)
+  --     j <- (bucketloads2 e pnum turns cyc)
+  --     return j
+  --       where gameinit = map (\b -> (map (\a -> (a, 0) :: ([[[Tensor Double]]], Int)) b, numtensor 0.0 [1,(length b) * (pred $ length b)])) (splitInto nets pnum)
+  --             minigames = concat $ map (rpt pnum) $ splitInto (map getDims nets) pnum
+
+
+rpt :: Int -> [a] -> [[a]]
+rpt num ls = take num $ repeat ls
+
+
+
+netsFrom :: ([([[[Tensor Double]]], Int)], Tensor Double) -> [[[[Tensor Double]]]]
+netsFrom game = map fst $ fst game
+
+--[([(player, score)], gameboard)]
+manygames :: [([([[[Tensor Double]]], Int)], Tensor Double)] -> Int -> [([([[[Tensor Double]]], Int)], Tensor Double)]
+manygames gs t = map (\a -> game3 a t) gs
+
+--game but with tensors. players/board and turns are params
+game3 :: ([([[[Tensor Double]]], Int)], Tensor Double) -> Int -> ([([[[Tensor Double]]], Int)], Tensor Double)
+game3 i t = foldl (\a b -> newturn3 a) i [1..t]
+
+initgame3 :: [[[[Tensor Double]]]] -> Int -> ([([[[Tensor Double]]], Int)], Tensor Double)
+initgame3 nets turns = game3 (map (\a -> (a, 0) :: ([[[Tensor Double]]], Int)) nets, numtensor 0.0 [1,(length nets) * (pred $ length nets)]) turns
+
+initgame4 :: [[[[Tensor Double]]]] -> Int -> Tensor Double -> ([([[[Tensor Double]]], Int)], Tensor Double)
+initgame4 nets turns startboard = game3 (map (\a -> (a, 0) :: ([[[Tensor Double]]], Int)) nets, startboard) turns
+
+getscores a = map snd (fst a)
+getboard a = fmap (round_sigmoid) $ snd a
+
+scores a = map snd $ fst a
+
+--best game ever
+newturn3 :: ([([[[Tensor Double]]], Int)], Tensor Double) -> ([([[[Tensor Double]]], Int)], Tensor Double)
+newturn3 prev@(p,g@(Tensor s i)) = (nps, ngb)
+  where nps = foldl (\c d -> c ++ [(fst (p !! d), (snd (p !! d)) + (sum $ zipWith (score) (dci !! d) (aln d)))]) [] cn1
+        ngb = makeTensor [succ $ s !! 0, s !! 1] (i ++ (concat dcs))
+        (cn1, cn2) = ([0..(pred $ length p)], [0..(pred $ pred $ length p)])
+        dcs = foldl (\a b -> a ++ [infoOf $ feed b (get_row g (pred $ s !! 0))]) [] (map fst p)
+        dci = map (map round_sigmoid) dcs
+        aln d = foldl (\e f -> e ++ [if (f < d) then ((except d dci) !! f) !! (d - 1) else ((except d dci) !! f) !! d]) [] cn2
+
+--takes in list of dimensions, each dimension is a whole net, converts to tensor dub by filling in dimensions with numbers
+gen_nets :: [[[[[Int]]]]] -> [Double] -> [[[[Tensor Double]]]]
+gen_nets dims nums = (foldl (\l c -> l ++ [zipNets makeTensor (dims !! (length l)) (sigNetMake (dims !! (length l)) c)]) [] (fragment chunks nums))
+  where chunks = map totaldim dims
+
+--special gen_nets for multigames
+gen_nets_2 :: [[[[[Int]]]]] -> [Double] -> Int -> [[[[Tensor Double]]]]
+gen_nets_2 dims nums displacement = (foldl (\l c -> l ++ [zipNets makeTensor (dims !! (length l)) (sigNetMake (dims !! (length l)) c)]) [] (fragment chunks (drop displacement nums)))
+  where chunks = map totaldim dims
+
+--column to row
+--mismatch b/w tensor and which player is referenced (not include self -> diff nums)
+
+
+exampledim :: [[[[Int]]]]
+exampledim = [[[[12,7], [1, 7]]], [[[7,3], [1,3]]]]
+
+xdims num = take num $ repeat exampledim
+
+xdims2 num = take num $ repeat [[[[6,4], [1,4]]], [[[4,2], [1,2]]]]
+
+xdims3 num = take num $ repeat [[[[2,3], [1,3]]], [[[3,1], [1,1]]]]
+
+xstart :: ([Player], Tensor Double)
+xstart = ((map netToPlayer (foldl (\l c -> l ++ [zipNets makeTensor (dims !! (length l)) (sigNetMake (dims !! (length l)) c)]) [] (fragment chunks rands))), (zerotensor [1, (length dims) * (pred $ length dims)]))
+  where dims = xdims 4
+        chunks = map totaldim dims
+
+exampleplayer = netToPlayer $ head $ gen_nets [exampledim] rands
+
+exampleboard :: Tensor Double
+exampleboard = numtensor 0.0 [12,1]
+
+xb = numtensor 0.0 [1, 12]
+
+
+
+exampleLayer = [[[12, 7], [1,7]], [[12, 7], [1, 7]]] :: [[[Int]]]
+
+exampleStep = [[12, 7], [1,7]] :: [[Int]]
+
+
+{-
+
+--dims must be a perfect square of playernumpergame
+epic_win :: [[[[[Int]]]]] -> Int -> Int -> IO ([[[[Tensor Double]]]])
+epic_win dims num_per_game turns = do
+  gen <- newStdGen
+  let rands1 = randomRs (-3.0, 3.0) gen
+  let rands2 = randomRs (-0.1, 0.1) gen
+  --let randNets =
+  -- let g = game3 ((map (\a -> (a, 0)) $ gen_nets dims rands1), (zerotensor [1, (length dims) * (pred $ length dims)])) 10
+  let gs = manygames (foldl (\b a -> b ++ [((map (\c -> (c, 0) :: ([[[Tensor Double]]], Int)) (gen_nets_2 a rands1 (displacement (concat $ map netsFrom b)))), (numtensor 0.0 [1, (length a) * (pred $ length a)]))]) [] minigames) turns
+  let e = the_work_of_darwin (concat $ map fst gs) (foldl (\f g -> f ++ (gen_nets_2 g rands2 (displacement f))) [] minigames) (div (length dims) (num_per_game))
+  return e
+    where chunks = map totaldim dims
+          minigames = splitInto dims num_per_game
+
+bucketloads :: [[[[Tensor Double]]]] -> Int -> Int -> IO ([[[[Tensor Double]]]])
+bucketloads nets pnum turns
+  | (div (length nets) pnum) == 1 = do
+      return nets
+  | otherwise = do
+      gen <- newStdGen
+      let rands1 = randomRs (-3.0, 3.0) gen
+      let rands2 = randomRs (-0.1, 0.1) gen
+      let gs = manygames (foldl (\b a -> b ++ [((map (\c -> (c, 0) :: ([[[Tensor Double]]], Int)) (gen_nets_2 a rands1 (displacement (concat $ map netsFrom b)))), (numtensor 0.0 [1, (length a) * (pred $ length a)]))]) [] minigames) turns
+      let e = the_work_of_darwin (concat $ map fst gs) (foldl (\f g -> f ++ (gen_nets_2 g rands2 (displacement f))) [] minigames) (div (length nets) pnum)
+      j <- (bucketloads e pnum turns)
+      return j
+        where dims = (map getDims nets)
+              minigames = splitInto dims pnum
+
+gaymerOVERLORD :: [[[[[Int]]]]] -> Int -> Int -> IO ([[[[Tensor Double]]]])
+gaymerOVERLORD dims n t = do
+  init <- epic_win dims n t
+  beta <- bucketloads init n t
+  return beta
+
+the_work_of_darwin :: [([[[Tensor Double]]], Int)] -> [[[[Tensor Double]]]] -> Int -> [[[[Tensor Double]]]]
+the_work_of_darwin players rands topnum =  (zipWith addNets eugenes rands)
+-- ++ [netMap (\a -> a / (fromIntegral topnum)) (foldl (addNets) (head eugenes) (tail eugenes))]
+-- ++ [foldl (\a b -> a ++ [(eugenes !! b) !! b]) [] [0..(pred netsize)]]
+       where eugenes = map fst $ take topnum $ reverse $ quickSort players
+             netsize = length $ players !! 0
+
+darwin2 :: [([[[Tensor Double]]], Int)] -> [[[[Tensor Double]]]] -> Int -> [[[[Tensor Double]]]]
+darwin2 players rands topnum =  (zipWith addNets eugenes rands)
+-- ++ [netMap (\a -> a / (fromIntegral topnum)) (foldl (addNets) (head eugenes) (tail eugenes))]
+-- ++ [foldl (\a b -> a ++ [(eugenes !! b) !! b]) [] [0..(pred netsize)]]
+       where eugenes = concat $ map (rpt topnum) $ map fst $ take topnum $ reverse $ quickSort players
+             netsize = length $ players !! 0
+
+the_work_of_darwin :: [([[[Tensor Double]]], Int)] -> [[[[Tensor Double]]]] -> Int -> [[[[Tensor Double]]]]
+the_work_of_darwin players rands topnum =  (zipWith addNets eugenes rands) ++ [netMap (\a -> a / (fromIntegral topnum)) (foldl (addNets) (head eugenes) (tail eugenes))]
+-- ++ [foldl (\a b -> a ++ [(eugenes !! b) !! b]) [] [0..(pred netsize)]]
+       where eugenes = map fst $ take (pred topnum) $ reverse $ quickSort players
+             netsize = length $ players !! 0
+
+io :: IO [Int]
+io = do
+  gen <- newStdGen
+  return $ take 10 $ (randomRs (-3, 3) gen)
+
+
+
+victory_royale :: [[[[[Int]]]]] -> IO ()
+victory_royale dims = do
+  gen <- newStdGen
+  let rands1 = randomRs (-3.0, 3.0) gen
+--  rands2 <- netMap (\a -> makeTensor dims (take (product dims) $ randomRs (-0.1, 0.1) gen :: [Double])) dims
+  let g = game (map netToPlayer (foldl (\l c -> l ++ [zipNets makeTensor (dims !! (length l)) (sigNetMake (dims !! (length l)) c)]) [] (fragment chunks rands1))) (zerotensor [(length dims) * (pred $ length dims), 1]) 10
+  putStrLn $ show $ snd g
+--  putStrLn $ show $ map snd $ fst g
+    where chunks = map totaldim dims
+
 module Train (
   feed,
   zerotensor,
@@ -34,27 +394,9 @@ module Train (
   rands
              ) where
 
---take you down to de pain train station in train town (sobbing)
-
-import LinearAlgebra
-import Game
-import Nets
-import System.Random
-import System.Random.Shuffle
-import Control.Concurrent
-import Control.Concurrent.Async
-
---type Network = [(Tensor Double, Tensor Double)]
-type Layer = [[Tensor Double]]
-
---default SIGMOID feedforthwards
-feed :: [[[Tensor Double]]] -> Tensor Double -> Tensor Double
-feed net input = last $ foldl (\list elem@[weight:bias:[]] -> list ++ [fmap (\a -> 1 / (1 + exp a)) $ ta (bias) (mm (last list) weight)]) [input] net
-
 squidward_1 :: [[[Tensor Double]]] -> Tensor Double -> Tensor Double
 squidward_1 net input = last $ foldl (\squisho shell@[weight:bias:[]] -> squisho ++ [fmap (\a -> 1 / (1 + exp a)) $ ta (bias) (mm (last squisho) weight)]) [input] net
 
-{-
 squidward_2 :: [[Tensor Double]] -> Tensor Double -> Tensor Double
 squidward_2 net input@(Tensor s i) = ta (net !! )
   where hiddens = tail $ foldl (\squisho shell@((weight_in:weight_squeegee:weight_out:bias_squeegee:bias_out:[]):xs) -> squisho ++ if squisho == [] then numtensor 0.0 (shapeOf bias_squeegee) else [ta bias_squeegee (ta (mm (getRow (pred $ length squisho) input) weight_in) (mm (last squisho) weight_squeegee))]) [] (take (s !! 0) net)
@@ -66,271 +408,32 @@ feedrecur :: [[Tensor Double]] -> [Tensor Double] -> ([Tensor Double], [Tensor D
 feedrecur layers input = (foldl (\outs hidden -> outs ++ [(ta (dex2 layers (length outs) 4) (mm (hidden) (dex2 layers (length outs) 2)))]) [] hiddens, hiddens)
   where hiddens = tail $ foldl (\ls i -> ls ++ [fmap (\a -> ) $ ta (dex2 layers i 3) (ta (mm (input !! i) (dex2 layers i 0)) (mm (last ls) (dex2 layers i 1)))]) [zerotensor (shapeOf ((layers !! 0) !! 3))] (ps (length input))
         dex2 l i i2 = (l !! i) !! i2
--}
 
-zerotensor shape = makeTensor shape (take (product shape) $ repeat 0)
-numtensor num shape = makeTensor shape (take (product shape) $ repeat num)
-
-
-
---takes networks, scores them by fitness, then takes the "topnum" and varies / crossbreeds them to create new generation
---evolve :: [Network] -> [Network] -> Int -> (Network -> Double) -> [Network]
-evolve :: [[[[Tensor Double]]]] -> [[[[Tensor Double]]]] -> Int -> ([[[Tensor Double]]] -> Int) -> [[[[Tensor Double]]]]
-evolve nets rands topnum fitness = (zipWith addNets eugenes rands)
--- ++ [netMap (\a -> a / (fromIntegral topnum)) (foldl (addNets) (head eugenes) (tail eugenes))]
--- ++ [foldl (\a b -> a ++ [(eugenes !! b) !! b]) [] [0..(pred netsize)]]
-       where eugenes = map fst $ take topnum $ quickSort (map (\i -> (i, fitness i)) nets)
-             netsize = length $ nets !! 0
-
-webbi :: [[[Tensor Double]]]
-webbi = [[[numtensor 4.1 [30, 10], numtensor 4.1 [1, 10]]], [[numtensor 4.1 [10, 5], numtensor 4.1 [1, 5]]]]
-zebbi :: [[[Tensor Double]]]
-zebbi = [[[numtensor 1.2 [30, 10], numtensor 1.2 [1, 10]]], [[numtensor 1.2 [10, 5], numtensor 1.2 [1, 5]]]]
-
-addNets :: [[[Tensor Double]]] -> [[[Tensor Double]]] -> [[[Tensor Double]]]
-addNets n1 n2 = zipWith (zipWith (zipWith (ta))) n1 n2
-
-zipNets :: (a -> b -> c) -> [[[a]]] -> [[[b]]] -> [[[c]]]
-zipNets f n1 n2 = zipWith (zipWith (zipWith (f))) n1 n2
-
-appendNets :: [[[Tensor Double]]] -> [[[Tensor Double]]] -> [[[Tensor Double]]]
-appendNets n1 n2 = zipWith (zipWith (++)) n1 n2
-
-appendNetsUp :: [[[Tensor Double]]] -> [[[Tensor Double]]] -> [[[Tensor Double]]]
-appendNetsUp n1 n2 = zipWith (++) n1 n2
-
-netMap :: (Functor f) => (a -> b) -> [[[f a]]] -> [[[f b]]]
-netMap fun net = map (map (map (fmap fun))) net
-
-getDims :: [[[Tensor Double]]] -> [[[[Int]]]]
-getDims tensors = map (map (map shapeOf)) tensors
-
-totaldim :: [[[[Int]]]] -> Int
-totaldim dims = sum $ concat $ concat $ concat (netMap product [dims])
-
-tdimup :: [[[[Int]]]] -> [Int]
-tdimup dims = concat $ concat $ concat (netMap product [dims])
-
-
---takes dims, a list of nums, and makes a net of doubles shaped like dims
-sigNetMake :: [[[[Int]]]] -> [Double] -> [[[[Double]]]]
-sigNetMake dims nums = tail $ foldl (\a b -> [[[[fromIntegral $ (newhead a) + (newprod b)]]]] ++ (tail a) ++ [sigLayerMake b (take (newprod b) (drop (newhead a) nums))]) [[[[0.0]]]] dims
-  where newprod a = sum $ concat $ map (map product) a
-        newhead = floor . head . head . head . head
-
-sigLayerMake :: [[[Int]]] -> [Double] -> [[[Double]]]
-sigLayerMake dims nums = tail $ foldl (\a b -> [[[fromIntegral $ (newhead a) + (newprod b)]]] ++ (tail a) ++ [sigStepMake b (take (newprod b) (drop (newhead a) nums))]) [[[0.0]]] dims
-  where newprod a = sum $ map product a
-        newhead = floor . head . head . head
-
-sigStepMake :: [[Int]] -> [Double] -> [[Double]]
-sigStepMake dims nums = tail $ foldl (\a b -> [[fromIntegral $ (newhead a) + product b]] ++ (tail a) ++ [take (product b) (drop (newhead a) nums)]) [[0.0]] dims
-  where newhead = floor . head . head
-
-
-
-exampleLayer = [[[12, 7], [1,7]], [[12, 7], [1, 7]]] :: [[[Int]]]
-
-exampleStep = [[12, 7], [1,7]] :: [[Int]]
-
-{-
-victory_royale :: [[[[[Int]]]]] -> IO ()
-victory_royale dims = do
-  gen <- newStdGen
-  let rands1 = randomRs (-3.0, 3.0) gen
---  rands2 <- netMap (\a -> makeTensor dims (take (product dims) $ randomRs (-0.1, 0.1) gen :: [Double])) dims
-  let g = game (map netToPlayer (foldl (\l c -> l ++ [zipNets makeTensor (dims !! (length l)) (sigNetMake (dims !! (length l)) c)]) [] (fragment chunks rands1))) (zerotensor [(length dims) * (pred $ length dims), 1]) 10
-  putStrLn $ show $ snd g
---  putStrLn $ show $ map snd $ fst g
-    where chunks = map totaldim dims
-
-
+darwin3 :: [[[[Tensor Double]]]] -> ([[[[Tensor Double]]]] -> [Int]) -> [Double] -> Int -> Int -> Int -> Int -> IO ()
+darwin3 nets fitness rands rand num_per_game turns topnum = do
+  --randNets =
+  let categs = categ nets num_per_game
+  let shifted_categs = foldl (\e f -> e ++ [shift_list (categs !! f) (f * rand)]) [] (pl categs) :: [[[[[Tensor Double]]]]]
+  let games_players_list = seg_categ shifted_categs num_per_categ
+  let results = play_games games_players_list turns
+  let all_net_score_pairs = concat $ map fst results
+  --these are the categorized net-score pairs for each playerspot category
+  let net_score_categs = categ all_net_score_pairs num_per_game
+  --still in category form. the proto eugenes are
+  let proto_eugenes = map (\i -> map fst $ concat $ rpt (div num_per_categ num_per_game) $ take num_per_game $ quick_sort_r i) net_score_categs
+  let eugenes = concat $ seg_categ proto_eugenes num_per_categ
+  let out = mutate eugenes rands
+  putStr "-----\n-----\nresults:\n-----\n-----\n"
+  putStrLn (show results)
+  putStr "-----\n-----\ngames_players_list:\n-----\n-----\n"
+  putStrLn (show games_players_list)
+  putStr "-----\n-----\nnet score pairs:\n-----\n-----\n"
+  putStrLn (show all_net_score_pairs)
+  putStr "-----\n-----\neugenes:\n-----\n-----\n"
+  putStrLn (show eugenes)
+    where num_per_categ = div (length nets) num_per_game
 
 -}
-
-
---dims must be a perfect square of playernumpergame
-epic_win :: [[[[[Int]]]]] -> Int -> Int -> IO ([[[[Tensor Double]]]])
-epic_win dims num_per_game turns = do
-  gen <- newStdGen
-  let rands1 = randomRs (-3.0, 3.0) gen
-  let rands2 = randomRs (-0.1, 0.1) gen
-  --let randNets =
-  -- let g = game3 ((map (\a -> (a, 0)) $ gen_nets dims rands1), (zerotensor [1, (length dims) * (pred $ length dims)])) 10
-  let gs = manygames (foldl (\b a -> b ++ [((map (\c -> (c, 0) :: ([[[Tensor Double]]], Int)) (gen_nets_2 a rands1 (displacement (concat $ map netsFrom b)))), (numtensor 0.0 [1, (length a) * (pred $ length a)]))]) [] minigames) turns
-  let e = the_work_of_darwin (concat $ map fst gs) (foldl (\f g -> f ++ (gen_nets_2 g rands2 (displacement f))) [] minigames) (div (length dims) (num_per_game))
-  return e
-    where chunks = map totaldim dims
-          minigames = splitInto dims num_per_game
-          displacement ls = sum $ map totaldim $ map getDims ls
-          --makegame ls el =
-
-bucketloads :: [[[[Tensor Double]]]] -> Int -> Int -> IO ([[[[Tensor Double]]]])
-bucketloads nets pnum turns
-  | (div (length nets) pnum) == 1 = do
-      return nets
-  | otherwise = do
-      gen <- newStdGen
-      let rands1 = randomRs (-3.0, 3.0) gen
-      let rands2 = randomRs (-0.1, 0.1) gen
-      let gs = manygames (foldl (\b a -> b ++ [((map (\c -> (c, 0) :: ([[[Tensor Double]]], Int)) (gen_nets_2 a rands1 (displacement (concat $ map netsFrom b)))), (numtensor 0.0 [1, (length a) * (pred $ length a)]))]) [] minigames) turns
-      let e = the_work_of_darwin (concat $ map fst gs) (foldl (\f g -> f ++ (gen_nets_2 g rands2 (displacement f))) [] minigames) (div (length nets) pnum)
-      j <- (bucketloads e pnum turns)
-      return j
-        where dims = (map getDims nets)
-              minigames = splitInto dims pnum
-              displacement ls = sum $ map totaldim $ map getDims ls 
-
-gaymerOVERLORD :: [[[[[Int]]]]] -> Int -> Int -> IO ([[[[Tensor Double]]]])
-gaymerOVERLORD dims n t = do
-  init <- epic_win dims n t
-  beta <- bucketloads init n t
-  return beta
-
-divideto :: [a] -> Int -> [[a]]
-divideto l n = splitInto l (div (length l) n)
-
-
-the_work_of_darwin :: [([[[Tensor Double]]], Int)] -> [[[[Tensor Double]]]] -> Int -> [[[[Tensor Double]]]]
-the_work_of_darwin players rands topnum =  (zipWith addNets eugenes rands)
--- ++ [netMap (\a -> a / (fromIntegral topnum)) (foldl (addNets) (head eugenes) (tail eugenes))]
--- ++ [foldl (\a b -> a ++ [(eugenes !! b) !! b]) [] [0..(pred netsize)]]
-       where eugenes = map fst $ take topnum $ reverse $ quickSort players
-             netsize = length $ players !! 0
-
-darwin2 :: [([[[Tensor Double]]], Int)] -> [[[[Tensor Double]]]] -> Int -> [[[[Tensor Double]]]]
-darwin2 players rands topnum =  (zipWith addNets eugenes rands)
--- ++ [netMap (\a -> a / (fromIntegral topnum)) (foldl (addNets) (head eugenes) (tail eugenes))]
--- ++ [foldl (\a b -> a ++ [(eugenes !! b) !! b]) [] [0..(pred netsize)]]
-       where eugenes = concat $ map (rpt topnum) $ map fst $ take topnum $ reverse $ quickSort players
-             netsize = length $ players !! 0
-
---dims must be a perfect square of playernumpergame
-epic_win2 :: [[[[[Int]]]]] -> Int -> Int -> IO ([[[[Tensor Double]]]])
-epic_win2 dims num_per_game turns = do
-  gen <- newStdGen
-  let rands1 = randomRs (-3.0, 3.0) gen
-  let rands2 = randomRs (-0.1, 0.1) gen
-  --let randNets =
-  -- let g = game3 ((map (\a -> (a, 0)) $ gen_nets dims rands1), (zerotensor [1, (length dims) * (pred $ length dims)])) 10
-  let gs = manygames (foldl (\b a -> b ++ [((map (\c -> (c, 0) :: ([[[Tensor Double]]], Int)) (gen_nets_2 a rands1 (displacement (concat $ map netsFrom b)))), (numtensor 0.0 [1, (length a) * (pred $ length a)]))]) [] minigames) turns
-  let e = the_work_of_darwin (concat $ map fst gs) (foldl (\f g -> f ++ (gen_nets_2 g rands2 (displacement f))) [] minigames) (div (length dims) (num_per_game))
-  return e
-    where chunks = map totaldim dims
-          minigames = splitInto dims num_per_game
-          displacement ls = sum $ map totaldim $ map getDims ls
-          --makegame ls el =
-
-bucketloads2 :: [[[[Tensor Double]]]] -> Int -> Int -> Int -> IO ([[[[Tensor Double]]]])
-bucketloads2 nets pnum turns cyc
-  | cyc == 0 = do
-      return nets
-  | otherwise = do
-      gen <- newStdGen
-      let rands2 = randomRs (-0.1, 0.1) gen
-      let gs = manygames gameinit turns
-      let e = darwin2 (concat $ map fst gs) (foldl (\f g -> f ++ (gen_nets_2 g rands2 (displacement f))) [] minigames) (div (length nets) pnum)
-      let s = shuffle' e (length e) gen
-      j <- (bucketloads2 s pnum turns)
-      return j
-        where gameinit = map (\b -> (map (\a -> (a, 0) :: ([[[Tensor Double]]], Int)) b, numtensor 0.0 [1,(length b) * (pred $ length b)])) (splitInto nets pnum)
-              minigames = concat $ map (rpt pnum) $ splitInto (map getDims nets) pnum
-              displacement ls = sum $ map totaldim $ map getDims ls 
-
-
-rpt num ls = take num $ repeat ls
-
-{-
-the_work_of_darwin :: [([[[Tensor Double]]], Int)] -> [[[[Tensor Double]]]] -> Int -> [[[[Tensor Double]]]]
-the_work_of_darwin players rands topnum =  (zipWith addNets eugenes rands) ++ [netMap (\a -> a / (fromIntegral topnum)) (foldl (addNets) (head eugenes) (tail eugenes))]
--- ++ [foldl (\a b -> a ++ [(eugenes !! b) !! b]) [] [0..(pred netsize)]]
-       where eugenes = map fst $ take (pred topnum) $ reverse $ quickSort players
-             netsize = length $ players !! 0
--}
-
-netsFrom :: ([([[[Tensor Double]]], Int)], Tensor Double) -> [[[[Tensor Double]]]]
-netsFrom game = map fst $ fst game
-
---[([(player, score)], gameboard)]
-manygames :: [([([[[Tensor Double]]], Int)], Tensor Double)] -> Int -> [([([[[Tensor Double]]], Int)], Tensor Double)]
-manygames gs t = map (\a -> game3 a t) gs
-
---game but with tensors. players/board and turns are params
-game3 :: ([([[[Tensor Double]]], Int)], Tensor Double) -> Int -> ([([[[Tensor Double]]], Int)], Tensor Double)
-game3 i t = foldl (\a b -> newturn3 a) i [1..t]
-
-initgame3 :: [[[[Tensor Double]]]] -> Int -> ([([[[Tensor Double]]], Int)], Tensor Double)
-initgame3 nets turns = game3 (map (\a -> (a, 0) :: ([[[Tensor Double]]], Int)) nets, numtensor 0.0 [1,(length nets) * (pred $ length nets)]) turns
-
-scores a = map snd $ fst a
-
---best game ever
-newturn3 :: ([([[[Tensor Double]]], Int)], Tensor Double) -> ([([[[Tensor Double]]], Int)], Tensor Double)
-newturn3 prev@(p,g@(Tensor s i)) = (nps, ngb)
-  where nps = foldl (\c d -> c ++ [(fst (p !! d), (snd (p !! d)) + (sum $ zipWith (score) (dci !! d) (aln d)))]) [] cn1
-        ngb = makeTensor [succ $ s !! 0, s !! 1] (i ++ (concat dcs))
-        (cn1, cn2) = ([0..(pred $ length p)], [0..(pred $ pred $ length p)])
-        dcs = foldl (\a b -> a ++ [infoOf $ feed b (get_row g (pred $ s !! 0))]) [] (map fst p)
-        dci = map (map round_sigmoid) dcs
-        aln d = foldl (\e f -> e ++ [if (f < d) then ((except d dci) !! f) !! (d - 1) else ((except d dci) !! f) !! d]) [] cn2
-
---takes in list of dimensions, each dimension is a whole net, converts to tensor dub by filling in dimensions with numbers
-gen_nets :: [[[[[Int]]]]] -> [Double] -> [[[[Tensor Double]]]]
-gen_nets dims nums = (foldl (\l c -> l ++ [zipNets makeTensor (dims !! (length l)) (sigNetMake (dims !! (length l)) c)]) [] (fragment chunks nums))
-  where chunks = map totaldim dims
-
---special gen_nets for multigames
-gen_nets_2 :: [[[[[Int]]]]] -> [Double] -> Int -> [[[[Tensor Double]]]]
-gen_nets_2 dims nums displacement = (foldl (\l c -> l ++ [zipNets makeTensor (dims !! (length l)) (sigNetMake (dims !! (length l)) c)]) [] (fragment chunks (drop displacement nums)))
-  where chunks = map totaldim dims
-
---column to row
---mismatch b/w tensor and which player is referenced (not include self -> diff nums)
-
-fragment :: [Int] -> [a] -> [[a]]
-fragment seglengths list
-  | seglengths == [] = []
-  | otherwise = [take (head seglengths) list] ++ fragment (tail seglengths) (drop (head seglengths) list)
-
-exampledim :: [[[[Int]]]]
-exampledim = [[[[12,7], [1, 7]]], [[[7,3], [1,3]]]]
-
-xdims num = take num $ repeat exampledim
-
-xdims2 num = take num $ repeat [[[[6,4], [1,4]]], [[[4,2], [1,2]]]]
-
-xstart :: ([Player], Tensor Double)
-xstart = ((map netToPlayer (foldl (\l c -> l ++ [zipNets makeTensor (dims !! (length l)) (sigNetMake (dims !! (length l)) c)]) [] (fragment chunks rands))), (zerotensor [1, (length dims) * (pred $ length dims)]))
-  where dims = xdims 4
-        chunks = map totaldim dims
-
-exampleplayer = netToPlayer $ head $ gen_nets [exampledim] rands
-
-exampleboard :: Tensor Double
-exampleboard = numtensor 0.0 [12,1]
-
-xb = numtensor 0.0 [1, 12]
-
-io :: IO [Int]
-io = do
-  gen <- newStdGen
-  return $ take 10 $ (randomRs (-3, 3) gen)
-
-netToPlayer :: [[[Tensor Double]]] -> Player
-netToPlayer wbs = ((\ins -> infoOf $ feed wbs ins), 0) :: Player
-
---sort the nets. yay! (lo to hi)
-quickSort :: [([[[Tensor Double]]], Int)] -> [([[[Tensor Double]]], Int)]
-quickSort a
-  | a == [] = []
-  | xs == [] = [x]
-  | otherwise = quickSort (filter (\p -> snd p < snd x) a) ++ (filter (\p -> snd p == snd x) a) ++ quickSort (filter (\p -> snd x < snd p) a)
-    where x = head a
-          xs = tail a
-
-
-
-
 
 
 

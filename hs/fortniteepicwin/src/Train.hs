@@ -1,13 +1,16 @@
 
 
 --take you down to de pain train station in train town (sobbing)
-
 import LinearAlgebra
+
 import Game
 import Nets
 import System.Random
 import Debug.Trace
 import Stats
+
+main = do
+
 
 --type Network = [(Tensor Double, Tensor Double)]
 type Layer = [[Tensor Double]]

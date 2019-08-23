@@ -81,8 +81,8 @@ rpn' = head . foldl fun [] . words
         fun (x:y:ys) "^" = (xp x (floor y)):ys
         fun xs num = read num:xs
 
-lim :: (Fractional a, Num a, RealFrac a, Read a) => String -> a -> String -> [a]
 lim p n xpr = [(rpn p (n + 0.000000001) xpr), (rpn p (n - 0.000000001) xpr)] 
+lim :: (Fractional a, Num a, RealFrac a, Read a) => String -> a -> String -> [a]
 
 deriv :: (Fractional a, Num a, RealFrac a, Read a) => String -> a -> String -> a
 --deriv p n xpr = [((rpn p (n + 0.0000000000001) xpr - rpn p n xpr) / 0.0000000000001), ((rpn p n xpr - rpn p (n - 0.0000000000001) xpr) / 0.0000000000001)] 

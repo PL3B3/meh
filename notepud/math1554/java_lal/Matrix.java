@@ -94,6 +94,25 @@ public class Matrix {
 		return matrices.toArray(finalMatrices);
 	}
 
+	public static String toString(int[] xs) {
+		String stringified = "{ ";
+		for (int i = 0; i < xs.length; i++) {
+			stringified += xs[i] + (i != xs.length - 1 ? ", " : " ");
+		}
+		return stringified + "}";
+	}
+	
+	public static String toString(int[][] as) {
+		String stringified = "{ ";
+		
+		for(int i = 0; i < as.length; i++) {
+			stringified += (i == 0 ? "" : "  ") + toString(as[i]) + (i != as.length - 1 ? "\n" : " }");
+		}
+		
+		return stringified;
+	}
+
+
 	//caution - this only works predictably if rows are of equal length b/c it sorts by leading index, regardless of total length
 	class RowComparator implements java.util.Comparator<int[]> {
 		public RowComparator () {}

@@ -1,11 +1,31 @@
-public class Matrix<T extends Number> {
-	private T[][] typeMatrix;
+import java.util.Scanner;
+import java.io.IOException;
+import java.io.File;
+import java.util.ArrayList;
+
+public class Matrix {
+	private int[][] intMatrix;
 	private int rows;
 	private int cols;
 	private boolean augmented;
 
-	public Matrix(int rows, int cols) {
-		typeMatrix = new T[rows][cols];
+	public static void main(String[] args) throws IOException {
+		String fileName;
+		System.out.println("Input filename to read from: ");
+		try (Scanner s = new Scanner(System.in)) {
+			fileName = s.readLine();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
+		Matrix[] epsilon = readMatrixFromFile(fileName);
+
+	}
+
+	//Constructors
+	public Matrix(int rows, int cols) {intMatrix = new int[rows][cols];}
+	public Matrix(String fileName) throws IOException {
+
 	}
 	public Matrix(int rows, boolean identity) {
 		this(rows, rows);
@@ -13,22 +33,20 @@ public class Matrix<T extends Number> {
 		if (identity) {
 			for (int r = 0; r < rows; r++) {
 				for (int c = 0; c < rows; c++) {
-					typeMatrix[r][c] = (r == c) ? 1 : 0;
+					intMatrix[r][c] = (r == c) ? 1 : 0;
 				}
 			}			
 		}
 	}
-	public Matrix(int rows) {
-		this(rows, rows);
-	}
-	public Matrix(int rows, int cols, T[] data) {
-		typeMatrix = new T[rows][cols];
+	public Matrix(int rows) {this(rows, rows);}
+	public Matrix(int rows, int cols, int[] data) {
+		intMatrix = new int[rows][cols];
 		if (data.length == rows * cols) {
 			int marker = 0;
 			for (int r = 0; r < rows; r++) {
 				for (int c = 0; c < cols; c++) {
 					marker++;
-					typeMatrix[r][marker % cols] = data[marker];	
+					intMatrix[r][marker % cols] = data[marker];	
 				}
 			}
 		} else {
@@ -36,24 +54,50 @@ public class Matrix<T extends Number> {
 			System.exit(0);
 		}
 	}
-	public Matrix(T[][] values) {
-		typeMatrix = values;
-	}
-	public Matrix() {
-		typeMatrix = new T[10][10];
-	}
-	public int numNonzeroes(T[] arr) {
+	public Matrix(int[][] values) {intMatrix = values;}
+	public Matrix() {intMatrix = new int[10][10];}
+	public int numNonzeroes(int[] arr) {
 		int crement = 0;
-		for (T i : arr) {
+		for (int i : arr) {
 			crement++;
 		}
 		return crement;
 	}
 
+	public String toString() {
+		
+	}
+
+	public Matrix[] readMatrixFromFile(String fileName) throws IOException {
+		//holds string form of matrix (rows, cols, data...)
+		ArrayList<String> matrixLines = new ArrayList<>();
+		ArrayList<Matrix> matrices = new ArrayList<Matrix>();
+
+		try (Scanner matrixReader = new Scanner(new File(fileName))) {	
+			while (matrixReader.hasNextLine()) {
+				matrixLines.add(matrixReader.nextLine());
+			}
+		} catch (IOException e) {
+			System.err.printf("IOException: %s%n", e);
+			System.exit(1);
+		}
+
+		for (String matrixLine : matrixLines) {
+			String[] numStrings = matrixLine.split(",");
+			int[] nums = new int[numStrings.length];
+			for(int i = 0; i < numStrings.length; i++) {
+				nums[i] = Integer.parseInt(numStrings[i]);
+			}
+			matrices.add(new Matrix(nums[0], nums[1], java.util.Arrays.copyOfRange(nums, 2, nums.length - 1)));
+		}
+		Matrix[] finalMatrices = new Matrix[matrices.size()];
+		return matrices.toArray(finalMatrices);
+	}
+
 	//caution - this only works predictably if rows are of equal length b/c it sorts by leading index, regardless of total length
-	class RowComparator implements java.util.Comparator<T[]> {
+	class RowComparator implements java.util.Comparator<int[]> {
 		public RowComparator () {}
-		public int compare(T[] a, T[] b) {
+		public int compare(int[] a, int[] b) {
 			int aLeading = getLeading(a)[1];
 			int bLeading = getLeading(b)[1];
 			
@@ -68,44 +112,62 @@ public class Matrix<T extends Number> {
 		m.setRow(flipend, oldFlipee);
 	}
 
-	public T[] addRows(int firstRow, int firstScale, int secondRow, int secondScale) {
-		T[] first = typeMatrix[firstRow];
-		T[] second = typeMatrix[secondRow];
+	public static int[] addRows(int[] firstRow, int firstScale, int[] secondRow, int secondScale) {
+		int[] first = scaleRow(firstRow, firstScale);
+		int[] second = scaleRow(secondRow, secondScale);
+
+		int[] last = new int[first.length];
+
+		for (int i = 0; i < first.length; i++) {
+			last[i] = first[i] + second[i];
+		}
+
+		return last;
 	}
 
-	public T[][] gettypeMatrix() {
-		return typeMatrix;
+	public static int[] scaleRow(int[] row, int scaleBy) {
+		int[] scaledRow = row;
+
+		for(int i = 0; i < row.length; i++) {
+			scaledRow[i] *= scaleBy;
+		}
+
+		return scaledRow;
 	}
 
-	public T[] getRow(int r) {
-		return typeMatrix[r];
+	public int[][] getintMatrix() {
+		return intMatrix;
 	}
 
-	public void setRow(int dex, T[] r) {
-		typeMatrix[dex] = r;
+	public int[] getRow(int r) {
+		return intMatrix[r];
+	}
+
+	public void setRow(int dex, int[] r) {
+		intMatrix[dex] = r;
 	}
 
 	/*
 	takes a row
 	returns int[2] where int[0] is leading value, int[1] is index
 	*/
-	public static T[] getLeading(T[] row) {
-		T[] leading = {0, row.length - 1};
+	public int[] getLeading(int[] row) {
+		int[] leading = {0, row.length - 1};
 		for (int i = 0; i < row.length; i++) {
-			T num = row[i];
+			int num = row[i];
 			if (num == 0) {
 				continue;
 			} else {
 				leading[0] = num;
-				leading[1] = (T) i;
+				leading[1] = i;
 				return leading;
 			}
 		}
 		return leading;
 	}
 
-	//sorts typeMatrix so leftmost leading value is on top
+	//sorts intMatrix so leftmost leading value is on top
 	public void sortRows() {
-		java.util.Arrays.sort(typeMatrix, new RowComparator());
+		java.util.Arrays.sort(intMatrix, new RowComparator());
 	}
 }

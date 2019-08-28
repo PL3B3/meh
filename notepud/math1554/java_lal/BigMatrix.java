@@ -7,28 +7,58 @@ public class BigMatrix {
 	private double[][] bigMatrix;
 
 	public static void main(String[] args) throws IOException {
-		String fileName = args[0];
-
-		if (null == fileName) {
-			System.out.println("Input filename to read from: ");
-			Scanner s = new Scanner(System.in);
-			fileName = s.nextLine();
+		if (args.length < 2) {
+			System.err.println("provide (String) filename where csv matrix is located, and (int) matrix index for which matrix to use, separated by spaces");
+			System.exit(0);
 		}
 
-		BigMatrix[] epsilon = readBigMatrixFromFile(fileName);
+		String fileName = args[0];
+		int index = Integer.parseInt(args[1]);
+		// if (null == fileName) {
+		// 	System.out.println("Input filename to read from: ");
+		// 	Scanner s = new Scanner(System.in);
+		// 	fileName = s.nextLine();
+		// }
+		BigMatrix[] jibi = readBigMatrixFromFile(fileName);
 
-		int x = 2;
-
-		epsilon[x].sortRows();
-		epsilon[x].reduce();
-		epsilon[x].echelate();
-		System.out.println(epsilon[x]);
-
-
-		double[] a = {1, 2, 3, 4};
-		double[] b = {5, 6, 7, 8};
+		jibi[index].resolve();
 
 		// System.out.println(toString(addRows(a, 1, b, 1)));		
+	}
+
+	public void resolve() {
+		sortRows();
+		reduce();
+		echelate();
+
+		System.out.println(this);
+		System.out.println();
+
+		for (int i = 0; i < bigMatrix.length; i++) {
+			
+			int leadingPosition = getLeadingPosition(bigMatrix[i]);
+			double leadingNumber = getLeadingNum(bigMatrix[i]);
+			String lineEquation = String.format("%4.2f(x%d)", leadingNumber, leadingPosition + 1);
+
+			if (leadingPosition == (bigMatrix[i].length - 1)) {
+				if (leadingNumber != 0) {
+					System.out.println("This system is inconsistent");
+					break;	
+				} else {
+					break;
+				}
+			} 
+
+			double[] subArray = java.util.Arrays.copyOfRange(bigMatrix[i], leadingPosition + 1, bigMatrix[i].length);
+			for (int j = 0; j < subArray.length - 1; j++) {
+				if (subArray[j] != 0) {
+					lineEquation += String.format(" + %4.2f(x%d)", subArray[j], leadingPosition + j + 2);
+				}
+			}
+
+			lineEquation += String.format(" = %4.2f%n", bigMatrix[i][bigMatrix[i].length - 1]);
+			System.out.println(lineEquation);
+		}
 	}
 
 	public void echelate() {
@@ -277,18 +307,6 @@ public class BigMatrix {
 		return nums;
 	}
 
-	//only use for small matrices
-	// public static double[][] twoPermutations(double[] nums) {
-	// 	double[][] permutations = new double[nums.length * nums.length][2];
-	// 	int counter = 0;
-	// 	for (int d = 0; d < nums.length; d++) {
-	// 		for (int c = 0; c < nums.length; c++) {
-	// 			permutations[counter] = [d, c];
-	// 			counter++;
-	// 		}
-	// 	}
-	// }
-
 	//sorts bigMatrix so leftmost leading value is on top
 	public void sortRows() {
 		java.util.Arrays.sort(bigMatrix, new RowComparator());
@@ -314,36 +332,6 @@ public class BigMatrix {
 			}
 		}
 	}
-
-	//reduces to rref
-	//assumes sorted
-	// public void reduceToOnes() {
-	// 	double[] notOneModAble = {0, 0, 0};
-		
-	// 	int currentPosition = getLeadingPosition(bigMatrix[0]);
-	// 	int currentPositionHighest = 0;
-	// 	int currentPositionNum = 0;
-
-	// 	//step 1: turn all leading into 1
-	// 	for (int i = 0; i < bigMatrix.length; i++) {
-	// 		double pivot = getLeadingNum(bigMatrix[i]);
-	// 		int pivotPosition =  getLeadingPosition(bigMatrix[i]);
-
-
-
-	// 		if (pivot != 0 && pivot != 1 && i < bigMatrix.length && getLeadingPosition(bigMatrix[i + 1]) == pivotPosition) {
-	// 			double pivotNext = getLeadingNum(bigMatrix[i + 1]);
-
-	// 			double[] coeffs = modOne(pivot, pivotNext);  
-
-	// 			if (coeffs == notOneModAble) {
-
-	// 			}
-
-	// 			bigMatrix[i] = addRows();
-	// 		}
-	// 	}
-	// }
 
 	private static boolean hasNonOneOrZero(double[] leadingNums) {
 		boolean has = false;
@@ -404,77 +392,6 @@ public class BigMatrix {
 		//System.out.println(leadCume);
 		sortRows();
 	}
-
-
-
-
-	// public static boolean modOneAble(double first, double second) {
-	// 	int a = (int) java.lang.Math.abs(first);
-	// 	int b = (int) java.lang.Math.abs(second);
-
-	// 	System.out.println(".");
-
-	// 	if (a == b | a == 0 | b == 0 | b % a == 0) {
-	// 		return false;
-	// 	} else if (b % a == 1 | b % a == -1 | b % a == a - 1 | b % a == a + 1) {
-	// 		return true;
-	// 	} else if (modOneAble(a, b - a) | modOneAble(b - a, a)) {
-	// 		return true;
-	// 	} else {
-	// 		return false;
-	// 	}
-	// }
-
-	// //returns {firstcoeff, secondcoeff, gap of (c*b - c*a)}
-	// public static double[] modOne(double first, double second) {
-	// 	double[] coeffs = {0, 0, 0};
-
-	// 	boolean negate = (first * second < 0) ? true : false;
-	// 	//only true if first > second. FLips values so final result is consistent
-	// 	boolean flip = false;
-
-	// 	if (! (modOneAble(first, second) && modOneAble(second, first))) {
-	// 		return coeffs;
-	// 	}
-
-	// 	int a = (int) java.lang.Math.abs(first);
-	// 	int b = (int) java.lang.Math.abs(second);
-	// 	if (b < a) {
-	// 		int bOld = b;
-	// 		b = a;
-	// 		a = bOld;
-	// 		flip = true;
-	// 	}
-
-	// 	int c = b - a;
-
-	// 	while(c > a) {
-	// 		coeffs[0] += 1;
-	// 		c = b - (a * coeffs[0]);
-	// 	}
-
-	// 	if (c == 1) {
-	// 		coeffs[2] = 1;
-	// 	} else if (c == a - 1) {
-	// 		coeffs[0] += 1;
-	// 		coeffs[2] = -1;
-	// 	} else if (a % c == 1) {
-
-	// 		coeffs[1] = (a / c);
-	// 		coeffs[2] = 1;
-	// 	} else if (a % c == a - 1) {
-
-	// 	}
-		
-	// 	if (flip) {
-
-	// 	}
-	// 	if (negate) {
-	// 		coeffs[0] *= -1;
-	// 	}
-
-	// 	return coeffs;
-	// }
 
 	public static double[] modOne(double first, double second) {
 		double[] coeffs = {0, 0, 0};

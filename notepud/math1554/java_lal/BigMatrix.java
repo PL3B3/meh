@@ -77,6 +77,7 @@ public class BigMatrix {
 
 	//Constructors
 	public BigMatrix(int rows, int cols) {bigMatrix = new double[rows][cols];}
+	public BigMatrix(BigMatrix bm) {bigMatrix = bm.bigMatrix;}
 	public BigMatrix(int rows, boolean identity) {
 		this(rows, rows);
 		
@@ -273,6 +274,13 @@ public class BigMatrix {
 		setRow(second, firstBackup);
 	}
 
+	public static void switchRowsStatic(double[][] matrix, int first, int second) {
+		double[] firstBackup = matrix[first];
+
+		matrix[first] = matrix[second];
+		
+	}
+
 	/*
 	takes a row
 	returns int[2] where int[0] is leading value, int[1] is index
@@ -309,7 +317,14 @@ public class BigMatrix {
 
 	//sorts bigMatrix so leftmost leading value is on top
 	public void sortRows() {
+		//for big ass inverse
+		double[][] identity = new BigMatrix(bigMatrix.length, true);
+	
+		double[][] bigMatrixBackup = bigMatrix;
+
 		java.util.Arrays.sort(bigMatrix, new RowComparator());
+
+		
 
 		int currentPosition = getLeadingPosition(bigMatrix[0]);
 		int currentPositionHighest = 0;

@@ -12,7 +12,7 @@ public class BigMatrix {
 			System.exit(0);
 		}
 
-		String fileName = args[0];
+		String fileName = arg[sz0];
 		int index = Integer.parseInt(args[1]);
 		// if (null == fileName) {
 		// 	System.out.println("Input filename to read from: ");
@@ -73,6 +73,10 @@ public class BigMatrix {
 				}	
 			}
 		}
+	}
+
+	public static BigMatrix matrixMult (BigMatrix leftMatrix, BigMatrix RightMatrix) {
+		
 	}
 
 	//Constructors
@@ -318,7 +322,7 @@ public class BigMatrix {
 	//sorts bigMatrix so leftmost leading value is on top
 	public void sortRows() {
 		//for big ass inverse
-		double[][] identity = new BigMatrix(bigMatrix.length, true);
+		//double[][] identity = new BigMatrix(bigMatrix.length, true);
 	
 		double[][] bigMatrixBackup = bigMatrix;
 

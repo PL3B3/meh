@@ -7,7 +7,7 @@ public class Rational {
 		Rational rational0 = new Rational(15L, 20L);
 		Rational rational1 = new Rational(9L, 24L);
 		System.out.println(rational0);
-//		System.out.println(greatestCommonFactor(91L, 728L));
+		System.out.println(greatestCommonFactor(228L, 20L));
 //		rational0.simplify();
 		System.out.println(rational0);
 		rational0.subtract(rational1);

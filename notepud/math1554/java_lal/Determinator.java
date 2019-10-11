@@ -13,14 +13,15 @@ public static String generateFormula (int level) {
 		return "(0,0)";
 	
 	} else {
-	
+		
+		String lowerFormula = generateFormula(level - 1);
+
+
 		for (int i = 0; i < level; i++) {
 
-
+			
 
 		}
-
-		generateFormula(level - 1);
 
 	}
 
@@ -29,7 +30,7 @@ public static String generateFormula (int level) {
 /*
 
  @param coordinate: String coord "(#,#)"
- @param translateBy: corresponds to (x,y) and false = 0, true = -1 
+ @param translateBy: corresponds to (x,y) and false = 0, true = +1 
 
 */
 
@@ -51,13 +52,13 @@ private static String translateCoordinate (String coordinate, boolean[] translat
 
 	if (translateBy[0]) {
 
-		first--;
+		first++;
 
 	}
 
 	if (translateBy[1]) {
 
-		second--;
+		second++;
 
 	}
 

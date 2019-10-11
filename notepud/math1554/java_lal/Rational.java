@@ -9,8 +9,8 @@ public class Rational {
 		System.out.println(rational0);
 		System.out.println(greatestCommonFactor(228L, 20L));
 //		rational0.simplify();
-		System.out.println(rational0);
-		rational0.subtract(rational1);
+		System.out.println(rational0)
+;gre		rational0.subtract(rational1);
 		rational0.subtract(rational1);
 		System.out.println(rational0);
 	}

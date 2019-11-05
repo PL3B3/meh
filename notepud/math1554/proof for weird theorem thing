@@ -1,0 +1,25 @@
+proof for weird theorem thing
+
+*A: more vectors than entries per vecotr -> dependent
+*B: only dependent when one vector is linear combo of others
+
+consider the following: a 2 * 3 matrix
+
+a b c
+d e f
+
+a
+d
+
+and 
+
+b
+e
+
+are the first two vectors. *A applies b/c it's 2 * 3. So cf must be in the span of the first two
+
+THis is always true because 
+	Case a: there's a zero vecotr: you win b/c it's just 0* all the other vectors
+	Case b: no zero vector: two vectors in 2d span a plane of all 2d bois. SImilarly, any <K> of <K>d vectors spans the whole "dimension" -> any other <K>d vector is incluyendo. 
+
+THis is the true meaning of free variables.

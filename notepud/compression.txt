@@ -1,0 +1,5 @@
+compression
+	basic idea: a small pattern with "variations" can capture a large amount of data
+	music files consist of repeated chords in different octaves, or same "timbre/sound" in different notes
+    objective: be able to separate segments of audio into distinct "normal waves" using that fourier transform
+    

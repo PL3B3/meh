@@ -1,24 +1,71 @@
+/*
+
+ @param size of square matrix to generate formula for. 1 is 1*1 matrix
+
+ @purpose Returns a string formula to calculate the determinant of a matrix
+
+*/
+
 public static String generateFormula (int level) {
-	if (level == 0) {
+	
+	if (level == 1) {
+	
 		return "(0,0)";
+	
 	} else {
-		generateFormula(level - 1);
+		
+		String lowerFormula = generateFormula(level - 1);
+
+
+		for (int i = 0; i < level; i++) {
+
+			
+
+		}
+
 	}
+
 }
 
 /*
+
  @param coordinate: String coord "(#,#)"
- @param translateBy: corresponds to (x,y) and false = -1, true = 0 
+ @param translateBy: corresponds to (x,y) and false = 0, true = +1 
+
 */
 
-private static String translateCoordinate (String coordinate, boolean[] translateBy) {
-	
+private static long[] getLongs (String coordinate) {
+
 	Scanner getLongs = new Scanner(coordinate);
 
-	String digits = coordinate.substring(1, coordinate.length() - 1);
+	return new long[] {getLongs.nextLong(), getLongs.nextLong()};
 
 }
 
-private Rational applyFormula (String formula, Rational[][] matrix) {
+private static String translateCoordinate (String coordinate, boolean[] translateBy) {
+
+	Scanner getLongs = new Scanner(coordinate);
+
+	long first = getLongs.nextLong();
+	
+	long second = getLongs.nextLong();
+
+	if (translateBy[0]) {
+
+		first++;
+
+	}
+
+	if (translateBy[1]) {
+
+		second++;
+
+	}
+
+	return String.format("(%d,%d)", first, second);
+
+}
+
+private static double applyFormula (String formula, double[][] matrix) {
 	
 }
